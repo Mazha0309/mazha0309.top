@@ -1,14 +1,21 @@
 import { Form, useActionData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { getSiteShell, saveSiteSettings } from "../lib/content.server";
+import { AdminLinkEditor } from "../components/admin-link-editor";
+import { getSiteSettings, saveSiteSettings } from "../lib/content.server";
 import { requireAdmin } from "../lib/auth.server";
 import { formString, requireSameOrigin } from "../lib/security.server";
-import type { ContentLink } from "../lib/types";
+import {
+  isAllowedDisplayUrl,
+  normalizeSiteCustomization,
+} from "../lib/site-customization";
+import type { ContentLink, SiteAccent } from "../lib/types";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await requireAdmin(request);
-  return getSiteShell();
+  return getSiteSettings();
 }
+
+const allowedAccents = new Set<SiteAccent>(["pink", "blue", "mint", "purple", "orange"]);
 
 export async function action({ request }: ActionFunctionArgs) {
   await requireAdmin(request);
@@ -16,20 +23,69 @@ export async function action({ request }: ActionFunctionArgs) {
   const form = await request.formData();
   try {
     const rawLinks = JSON.parse(formString(form, "linksJson")) as unknown;
-    if (!Array.isArray(rawLinks)) throw new Error("链接配置必须是一个 JSON 数组。");
+    if (!Array.isArray(rawLinks)) throw new Error("链接配置格式不对，请刷新页面后重试。");
     const links = rawLinks.slice(0, 30).map((raw, index) => {
       if (!raw || typeof raw !== "object") throw new Error(`第 ${index + 1} 条链接格式不对。`);
       const item = raw as Record<string, unknown>;
       const kind = item.kind === "social" ? "social" : "nav";
+      const label = String(item.label ?? "").trim().slice(0, 60);
+      const url = String(item.url ?? "").trim().slice(0, 600);
+      const enabled = item.enabled !== false;
+      if (enabled && (!label || !url)) {
+        throw new Error(`第 ${index + 1} 条公开链接缺少文字或地址。`);
+      }
+      if (!isAllowedDisplayUrl(url)) {
+        throw new Error(`第 ${index + 1} 条链接只允许站内路径、HTTP(S) 或 mailto 地址。`);
+      }
       return {
         kind,
-        label: String(item.label ?? "").trim().slice(0, 60),
-        url: String(item.url ?? "").trim().slice(0, 600),
+        label,
+        url,
         note: String(item.note ?? "").trim().slice(0, 160) || null,
-        position: Number(item.position ?? index) || 0,
-        enabled: item.enabled !== false,
+        position: index,
+        enabled,
       } satisfies Omit<ContentLink, "id">;
+    }).filter((item) => item.label || item.url);
+
+    const accent = formString(form, "accentColor", { max: 20 }) as SiteAccent;
+    if (!allowedAccents.has(accent)) throw new Error("主色选项不在允许范围内。");
+
+    const customization = normalizeSiteCustomization({
+      siteTitle: formString(form, "siteTitle", { required: true, max: 120 }),
+      siteDescription: formString(form, "siteDescription", { max: 240 }),
+      brandMark: formString(form, "brandMark", { required: true, max: 2 }),
+      brandSubtitle: formString(form, "brandSubtitle", { max: 60 }),
+      footerText: formString(form, "footerText", { max: 220 }),
+      heroKicker: formString(form, "heroKicker", { max: 120 }),
+      primaryActionLabel: formString(form, "primaryActionLabel", { max: 40 }),
+      primaryActionUrl: formString(form, "primaryActionUrl", { max: 600 }),
+      secondaryActionLabel: formString(form, "secondaryActionLabel", { max: 40 }),
+      secondaryActionUrl: formString(form, "secondaryActionUrl", { max: 600 }),
+      marqueeText: formString(form, "marqueeText", { max: 400 }),
+      projectsEyebrow: formString(form, "projectsEyebrow", { max: 100 }),
+      projectsTitle: formString(form, "projectsTitle", { max: 100 }),
+      blogEyebrow: formString(form, "blogEyebrow", { max: 100 }),
+      blogTitle: formString(form, "blogTitle", { max: 100 }),
+      nowEyebrow: formString(form, "nowEyebrow", { max: 100 }),
+      nowTitle: formString(form, "nowTitle", { max: 100 }),
+      signoffText: formString(form, "signoffText", { max: 240 }),
+      signoffLinkLabel: formString(form, "signoffLinkLabel", { max: 60 }),
+      signoffLinkUrl: formString(form, "signoffLinkUrl", { max: 600 }),
+      accentColor: accent,
+      showProjects: form.get("showProjects") === "on",
+      showBlog: form.get("showBlog") === "on",
+      showNow: form.get("showNow") === "on",
+      showSignoff: form.get("showSignoff") === "on",
     });
+
+    for (const [label, url] of [
+      ["首页主按钮", customization.primaryActionUrl],
+      ["首页次按钮", customization.secondaryActionUrl],
+      ["页尾招呼链接", customization.signoffLinkUrl],
+    ] as const) {
+      if (!isAllowedDisplayUrl(url)) throw new Error(`${label}地址格式不安全。`);
+    }
+
     await saveSiteSettings(
       {
         id: "main",
@@ -43,13 +99,32 @@ export async function action({ request }: ActionFunctionArgs) {
         location: formString(form, "location", { max: 120 }),
         statusText: formString(form, "statusText", { max: 180 }),
         email: formString(form, "email", { max: 240 }),
+        customization,
       },
       links,
     );
-    return { ok: true, message: "站点身份与链接已更新。" };
+    return { ok: true, message: "站点外观、首页文案与链接都保存好了。" };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "保存失败。" };
   }
+}
+
+function PanelHeading({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="settings-panel__heading">
+      <span className="micro-label">{eyebrow}</span>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </div>
+  );
 }
 
 export default function AdminSettings({
@@ -58,46 +133,132 @@ export default function AdminSettings({
   loaderData: Awaited<ReturnType<typeof loader>>;
 }) {
   const { profile, links } = loaderData;
+  const customization = profile.customization;
   const actionData = useActionData<typeof action>();
-  const linksJson = JSON.stringify(
-    links.map(({ kind, label, url, note, position, enabled }) => ({
-      kind,
-      label,
-      url,
-      note,
-      position,
-      enabled,
-    })),
-    null,
-    2,
-  );
+
   return (
     <>
-      <header className="admin-heading">
-        <span className="micro-label">SITE IDENTITY / GLOBAL</span>
-        <h1>主页身份与链接</h1>
-        <p>这里的改动会影响页头、首页 Hero、关于页和页脚。</p>
+      <header className="admin-heading admin-heading--actions">
+        <div>
+          <span className="micro-label">SITE CUSTOMIZER / 公开站点</span>
+          <h1>把主页调成你的样子</h1>
+          <p>品牌、首页栏目、链接与显示开关都在这里；保存后不需要重新构建。</p>
+        </div>
+        <a className="button button--small" href="/" target="_blank" rel="noreferrer">打开公开页 ↗</a>
       </header>
+
       {actionData?.ok ? <p className="form-message form-message--success">{actionData.message}</p> : null}
       {actionData && !actionData.ok ? <p className="form-message form-message--error">{actionData.error}</p> : null}
-      <Form method="post" className="admin-panel">
-        <div className="form-grid">
-          <label className="field"><span>显示名</span><input name="displayName" defaultValue={profile.displayName} required /></label>
-          <label className="field"><span>Handle</span><input name="handle" defaultValue={profile.handle} /></label>
-          <label className="field field--wide"><span>Hero 眉题</span><input name="heroEyebrow" defaultValue={profile.heroEyebrow} /></label>
-          <label className="field field--wide"><span>Hero 主标题</span><input name="heroTitle" defaultValue={profile.heroTitle} required /></label>
-          <label className="field field--wide"><span>Hero 简介</span><textarea name="heroIntro" rows={3} defaultValue={profile.heroIntro} /></label>
-          <label className="field field--wide"><span>人物简介</span><textarea name="bio" rows={3} defaultValue={profile.bio} /></label>
-          <label className="field field--wide"><span>头像 URL</span><input name="avatarUrl" type="url" defaultValue={profile.avatarUrl} /></label>
-          <label className="field"><span>位置</span><input name="location" defaultValue={profile.location} /></label>
-          <label className="field"><span>当前状态</span><input name="statusText" defaultValue={profile.statusText} /></label>
-          <label className="field"><span>公开邮箱（空则不显示）</span><input name="email" type="email" defaultValue={profile.email} /></label>
-          <label className="field field--wide">
-            <span>导航与社交链接 <small>JSON / BLANK URLS NEVER RENDER</small></span>
-            <textarea name="linksJson" rows={24} defaultValue={linksJson} spellCheck={false} />
-          </label>
+
+      <nav className="settings-jump" aria-label="设置区域">
+        <a href="#identity">身份</a>
+        <a href="#brand">品牌与 SEO</a>
+        <a href="#homepage">首页文案</a>
+        <a href="#modules">显示模块</a>
+        <a href="#links">链接</a>
+      </nav>
+
+      <Form method="post" className="admin-settings-form">
+        <section className="admin-panel settings-panel" id="identity">
+          <PanelHeading
+            eyebrow="01 / IDENTITY"
+            title="你是谁"
+            description="头像、名字和正在做什么，会被名片、关于页与页脚共同使用。"
+          />
+          <div className="form-grid">
+            <label className="field"><span>显示名</span><input name="displayName" defaultValue={profile.displayName} required /></label>
+            <label className="field"><span>Handle</span><input name="handle" defaultValue={profile.handle} /></label>
+            <label className="field field--wide"><span>头像 URL</span><input name="avatarUrl" type="url" defaultValue={profile.avatarUrl} /></label>
+            <label className="field"><span>位置</span><input name="location" defaultValue={profile.location} /></label>
+            <label className="field"><span>当前状态</span><input name="statusText" defaultValue={profile.statusText} /></label>
+            <label className="field"><span>公开邮箱（空则不显示）</span><input name="email" type="email" defaultValue={profile.email} /></label>
+            <label className="field field--wide"><span>人物简介</span><textarea name="bio" rows={3} defaultValue={profile.bio} /></label>
+          </div>
+        </section>
+
+        <section className="admin-panel settings-panel" id="brand">
+          <PanelHeading
+            eyebrow="02 / BRAND & SEARCH"
+            title="站点名片"
+            description="控制页头的小印章、浏览器标题、搜索摘要与全站页脚。"
+          />
+          <div className="form-grid">
+            <label className="field">
+              <span>印章字符 <small>最多 2 个字符</small></span>
+              <input name="brandMark" maxLength={2} defaultValue={customization.brandMark} required />
+            </label>
+            <label className="field"><span>品牌副标题</span><input name="brandSubtitle" defaultValue={customization.brandSubtitle} /></label>
+            <label className="field field--wide"><span>浏览器与分享标题</span><input name="siteTitle" defaultValue={customization.siteTitle} required /></label>
+            <label className="field field--wide"><span>搜索与分享摘要</span><textarea name="siteDescription" rows={2} defaultValue={customization.siteDescription} /></label>
+            <label className="field field--wide"><span>页脚小字</span><input name="footerText" defaultValue={customization.footerText} /></label>
+          </div>
+        </section>
+
+        <section className="admin-panel settings-panel" id="homepage">
+          <PanelHeading
+            eyebrow="03 / HOME COPY"
+            title="首页上写什么"
+            description="所有固定文案都搬到这里了，按钮支持站内路径或 HTTP(S) 地址。"
+          />
+          <div className="form-grid">
+            <label className="field field--wide"><span>Hero 眉题</span><input name="heroEyebrow" defaultValue={profile.heroEyebrow} /></label>
+            <label className="field field--wide"><span>Hero 招呼</span><input name="heroKicker" defaultValue={customization.heroKicker} /></label>
+            <label className="field field--wide"><span>Hero 主标题</span><input name="heroTitle" defaultValue={profile.heroTitle} required /></label>
+            <label className="field field--wide"><span>Hero 简介</span><textarea name="heroIntro" rows={3} defaultValue={profile.heroIntro} /></label>
+            <label className="field"><span>主按钮文字</span><input name="primaryActionLabel" defaultValue={customization.primaryActionLabel} /></label>
+            <label className="field"><span>主按钮地址</span><input name="primaryActionUrl" defaultValue={customization.primaryActionUrl} /></label>
+            <label className="field"><span>次按钮文字</span><input name="secondaryActionLabel" defaultValue={customization.secondaryActionLabel} /></label>
+            <label className="field"><span>次按钮地址</span><input name="secondaryActionUrl" defaultValue={customization.secondaryActionUrl} /></label>
+            <label className="field field--wide"><span>黄色跑马灯</span><input name="marqueeText" defaultValue={customization.marqueeText} /></label>
+            <label className="field"><span>项目区眉题</span><input name="projectsEyebrow" defaultValue={customization.projectsEyebrow} /></label>
+            <label className="field"><span>项目区标题</span><input name="projectsTitle" defaultValue={customization.projectsTitle} /></label>
+            <label className="field"><span>博客区眉题</span><input name="blogEyebrow" defaultValue={customization.blogEyebrow} /></label>
+            <label className="field"><span>博客区标题</span><input name="blogTitle" defaultValue={customization.blogTitle} /></label>
+            <label className="field"><span>近况区眉题</span><input name="nowEyebrow" defaultValue={customization.nowEyebrow} /></label>
+            <label className="field"><span>近况区标题</span><input name="nowTitle" defaultValue={customization.nowTitle} /></label>
+            <label className="field field--wide"><span>页尾招呼</span><input name="signoffText" defaultValue={customization.signoffText} /></label>
+            <label className="field"><span>页尾链接文字</span><input name="signoffLinkLabel" defaultValue={customization.signoffLinkLabel} /></label>
+            <label className="field"><span>页尾链接地址</span><input name="signoffLinkUrl" defaultValue={customization.signoffLinkUrl} /></label>
+          </div>
+        </section>
+
+        <section className="admin-panel settings-panel" id="modules">
+          <PanelHeading
+            eyebrow="04 / APPEARANCE"
+            title="颜色与显示模块"
+            description="仍然固定暖纸张，不恢复深色模式；这里只换强调色和首页模块。"
+          />
+          <div className="appearance-settings">
+            <label className="field">
+              <span>全站强调色</span>
+              <select name="accentColor" defaultValue={customization.accentColor}>
+                <option value="pink">莓果粉</option>
+                <option value="blue">天空蓝</option>
+                <option value="mint">薄荷绿</option>
+                <option value="purple">葡萄紫</option>
+                <option value="orange">橘子汽水</option>
+              </select>
+            </label>
+            <div className="accent-swatches" aria-label="可选强调色预览">
+              {["pink", "blue", "mint", "purple", "orange"].map((color) => <span key={color} data-color={color} />)}
+            </div>
+          </div>
+          <div className="module-toggle-grid">
+            <label className="module-toggle"><input name="showProjects" type="checkbox" defaultChecked={customization.showProjects} /><span><strong>项目施工区</strong><small>首页展示精选项目</small></span></label>
+            <label className="module-toggle"><input name="showBlog" type="checkbox" defaultChecked={customization.showBlog} /><span><strong>博客纸片区</strong><small>首页展示最新文章</small></span></label>
+            <label className="module-toggle"><input name="showNow" type="checkbox" defaultChecked={customization.showNow} /><span><strong>最近在干嘛</strong><small>首页展示 NOW 页面摘要</small></span></label>
+            <label className="module-toggle"><input name="showSignoff" type="checkbox" defaultChecked={customization.showSignoff} /><span><strong>页尾招呼条</strong><small>首页底部粉色邀请条</small></span></label>
+          </div>
+        </section>
+
+        <section className="admin-panel settings-panel" id="links">
+          <AdminLinkEditor links={links} />
+        </section>
+
+        <div className="sticky-savebar settings-savebar">
+          <span>改动只在按下保存后公开。</span>
+          <button className="button button--primary" type="submit">保存全部设置</button>
         </div>
-        <button className="button button--primary" type="submit">保存全站设置</button>
       </Form>
     </>
   );

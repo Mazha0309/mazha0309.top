@@ -27,6 +27,7 @@ import {
   fallbackProfile,
   fallbackProjects,
 } from "./seed-content";
+import { normalizeSiteCustomization } from "./site-customization";
 import { estimateReadingMinutes, mdxToText, slugify, splitTags } from "./content-utils";
 import type {
   ContentLink,
@@ -51,6 +52,14 @@ function withReadingTime<T extends { contentMdx: string }>(post: T) {
   };
 }
 
+function hydrateProfile(profile?: typeof siteProfiles.$inferSelect): SiteProfile {
+  const source = profile ?? fallbackProfile;
+  return {
+    ...source,
+    customization: normalizeSiteCustomization(source.customization),
+  } as SiteProfile;
+}
+
 export async function getSiteShell() {
   if (!hasDatabase()) {
     return { profile: fallbackProfile, links: fallbackLinks };
@@ -65,7 +74,25 @@ export async function getSiteShell() {
     .orderBy(asc(contentLinks.position));
 
   return {
-    profile: (profile ?? fallbackProfile) as SiteProfile,
+    profile: hydrateProfile(profile),
+    links: links as ContentLink[],
+  };
+}
+
+export async function getSiteSettings() {
+  if (!hasDatabase()) {
+    return { profile: fallbackProfile, links: fallbackLinks };
+  }
+
+  const db = getDb();
+  const [profile] = await db.select().from(siteProfiles).limit(1);
+  const links = await db
+    .select()
+    .from(contentLinks)
+    .orderBy(asc(contentLinks.position));
+
+  return {
+    profile: hydrateProfile(profile),
     links: links as ContentLink[],
   };
 }

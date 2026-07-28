@@ -34,7 +34,7 @@ docker compose up -d --no-build app postgres
 healthy=false
 for _attempt in {1..30}; do
   if docker compose exec -T app node -e \
-    "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" \
+    "fetch('http://127.0.0.1:3000/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" \
     >/dev/null 2>&1; then
     healthy=true
     break
@@ -48,7 +48,7 @@ if [[ "$healthy" == true ]]; then
   exit 0
 fi
 
-echo "Health check failed." >&2
+echo "Readiness check failed." >&2
 docker compose logs --tail=120 app >&2 || true
 
 if [[ -n "$previous_image" && "$previous_image" != "$APP_IMAGE" ]]; then

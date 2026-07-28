@@ -5,6 +5,7 @@ import type {
   ProjectRecord,
   SiteProfile,
 } from "./types";
+import { defaultSiteCustomization } from "./site-customization";
 
 export const fallbackProfile: SiteProfile = {
   id: "main",
@@ -19,6 +20,7 @@ export const fallbackProfile: SiteProfile = {
   location: "Internet",
   statusText: "正在折腾一只会长大的主页",
   email: "",
+  customization: defaultSiteCustomization,
 };
 
 export const fallbackLinks: ContentLink[] = [

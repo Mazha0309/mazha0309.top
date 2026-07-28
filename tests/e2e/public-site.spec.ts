@@ -22,3 +22,18 @@ test("global search finds seeded content", async ({ page }) => {
   await page.goto("/search?q=二维码");
   await expect(page.getByRole("link", { name: "RelayQR" })).toBeVisible();
 });
+
+test("public liveness probe stays minimal", async ({ request }) => {
+  const response = await request.get("/healthz");
+  expect(response.ok()).toBe(true);
+  const body = await response.json();
+  expect(body.ok).toBe(true);
+  expect(body.database).toBeUndefined();
+  expect(body.host).toBeUndefined();
+});
+
+test("detailed resource probe requires an admin session", async ({ request }) => {
+  const response = await request.get("/api/admin/probe", { maxRedirects: 0 });
+  expect(response.status()).toBe(302);
+  expect(response.headers().location).toContain("/admin/login");
+});
