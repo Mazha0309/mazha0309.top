@@ -1,0 +1,1 @@
+ALTER TABLE "site_profiles" ADD COLUMN "customization" jsonb DEFAULT '{}'::jsonb NOT NULL;

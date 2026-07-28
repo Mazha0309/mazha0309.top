@@ -6,11 +6,17 @@ import { PostCard } from "../components/post-card";
 import { ProjectCard } from "../components/project-card";
 import { PageViewBeacon } from "../components/post-engagement";
 
-export const meta: MetaFunction = () => [
-  { title: "Mazha0309 — 喵喵喵的数字工作台" },
+export const meta: MetaFunction<typeof loader> = ({ loaderData }) => [
+  { title: loaderData?.profile.customization.siteTitle ?? "Mazha0309" },
   {
     name: "description",
-    content: "项目、文章和正在发生的怪点子，全都钉在这张数字工作台上。",
+    content: loaderData?.profile.customization.siteDescription ?? "Mazha0309 的个人主页与博客。",
+  },
+  { property: "og:type", content: "website" },
+  { property: "og:title", content: loaderData?.profile.customization.siteTitle ?? "Mazha0309" },
+  {
+    property: "og:description",
+    content: loaderData?.profile.customization.siteDescription ?? "Mazha0309 的个人主页与博客。",
   },
 ];
 
@@ -25,6 +31,21 @@ export async function loader(_args: LoaderFunctionArgs) {
 
 export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<typeof loader>> }) {
   const { profile, posts, projects, nowHtml } = loaderData;
+  const customization = profile.customization;
+  const showLowerDesk = customization.showBlog || customization.showNow;
+
+  const renderAction = (
+    label: string,
+    url: string,
+    className: string,
+    mark: string,
+  ) => {
+    if (!label || !url) return null;
+    const content = <>{label} <span aria-hidden="true">{mark}</span></>;
+    return url.startsWith("/")
+      ? <Link className={className} to={url}>{content}</Link>
+      : <a className={className} href={url} rel="noreferrer">{content}</a>;
+  };
 
   return (
     <>
@@ -32,16 +53,22 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
       <section className="home-hero content-width">
         <div className="hero-copy">
           <span className="scrap-label">{profile.heroEyebrow}</span>
-          <p className="hero-kicker">HELLO, FRIEND / 欢迎来玩</p>
+          {customization.heroKicker ? <p className="hero-kicker">{customization.heroKicker}</p> : null}
           <h1>{profile.heroTitle}</h1>
           <p className="hero-intro">{profile.heroIntro}</p>
           <div className="hero-actions">
-            <Link className="button button--primary" to="/blog">
-              翻阅博客 <span aria-hidden="true">↗</span>
-            </Link>
-            <Link className="button button--secondary" to="/projects">
-              看看项目 <span aria-hidden="true">⌁</span>
-            </Link>
+            {renderAction(
+              customization.primaryActionLabel,
+              customization.primaryActionUrl,
+              "button button--primary",
+              "↗",
+            )}
+            {renderAction(
+              customization.secondaryActionLabel,
+              customization.secondaryActionUrl,
+              "button button--secondary",
+              "⌁",
+            )}
           </div>
           <p className="hero-footnote">
             <span aria-hidden="true">✦</span> 不保证有用，保证是本人制作
@@ -70,18 +97,20 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
         </div>
       </section>
 
-      <section className="marquee-strip" aria-label="站点状态">
-        <div>
-          <span>CODE / RADIO / SELF-HOSTED / ODD IDEAS /</span>
-          <span aria-hidden="true">CODE / RADIO / SELF-HOSTED / ODD IDEAS /</span>
-        </div>
-      </section>
+      {customization.marqueeText ? (
+        <section className="marquee-strip" aria-label="站点状态">
+          <div>
+            <span>{customization.marqueeText}</span>
+            <span aria-hidden="true">{customization.marqueeText}</span>
+          </div>
+        </section>
+      ) : null}
 
-      <section className="home-section content-width">
+      {customization.showProjects ? <section className="home-section content-width">
         <div className="section-title-row">
           <div>
-            <span className="micro-label">THINGS I MADE / 近期施工</span>
-            <h2>拿得出手的几个坑</h2>
+            <span className="micro-label">{customization.projectsEyebrow}</span>
+            <h2>{customization.projectsTitle}</h2>
           </div>
           <Link className="arrow-link" to="/projects">
             查看全部项目 ↗
@@ -92,14 +121,14 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
             <ProjectCard key={project.id} project={project} index={index} />
           ))}
         </div>
-      </section>
+      </section> : null}
 
-      <section className="home-split content-width">
-        <div className="home-section home-section--posts">
+      {showLowerDesk ? <section className={`home-split content-width${customization.showBlog !== customization.showNow ? " home-split--single" : ""}`}>
+        {customization.showBlog ? <div className="home-section home-section--posts">
           <div className="section-title-row">
             <div>
-              <span className="micro-label">LATEST NOTES / 新贴上去的</span>
-              <h2>博客纸片</h2>
+              <span className="micro-label">{customization.blogEyebrow}</span>
+              <h2>{customization.blogTitle}</h2>
             </div>
             <span className="doodle-arrow" aria-hidden="true">
               ↓
@@ -114,12 +143,12 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
           ) : (
             <p className="empty-note">正在写。墨水还没干，先不要催喔。</p>
           )}
-        </div>
+        </div> : null}
 
-        <aside className="now-card">
+        {customization.showNow ? <aside className="now-card">
           <span className="tape tape--corner" aria-hidden="true" />
-          <span className="micro-label">THESE DAYS / 最近</span>
-          <h2>现在在干嘛</h2>
+          <span className="micro-label">{customization.nowEyebrow}</span>
+          <h2>{customization.nowTitle}</h2>
           <div
             className="mini-prose"
             dangerouslySetInnerHTML={{ __html: nowHtml }}
@@ -127,16 +156,18 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
           <Link to="/about" className="arrow-link">
             多认识我一点 ↗
           </Link>
-        </aside>
-      </section>
+        </aside> : null}
+      </section> : null}
 
-      <section className="home-signoff content-width">
+      {customization.showSignoff ? <section className="home-signoff content-width">
         <span aria-hidden="true">♥</span>
-        <p>如果你也在造一些奇怪但认真的东西，我们大概聊得来。</p>
-        <a href="https://github.com/Mazha0309" rel="noreferrer">
-          去 GitHub 敲门 ↗
-        </a>
-      </section>
+        <p>{customization.signoffText}</p>
+        {customization.signoffLinkLabel && customization.signoffLinkUrl ? (
+          <a href={customization.signoffLinkUrl} rel="noreferrer">
+            {customization.signoffLinkLabel} ↗
+          </a>
+        ) : null}
+      </section> : null}
     </>
   );
 }

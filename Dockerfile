@@ -35,5 +35,5 @@ COPY --from=build --chown=mazha:mazha /app/app ./app
 USER mazha
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=4s --start-period=25s --retries=4 \
-  CMD node -e "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:3000/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 CMD ["npm", "run", "start"]

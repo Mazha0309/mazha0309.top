@@ -20,17 +20,17 @@ export const links: LinksFunction = () => [
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
 ];
 
-export const meta: MetaFunction = () => [
-  { title: "Mazha0309 — 喵喵喵的数字工作台" },
+export const meta: MetaFunction<typeof loader> = ({ loaderData }) => [
+  { title: loaderData?.profile.customization.siteTitle ?? "Mazha0309" },
   {
     name: "description",
-    content: "Mazha0309 的个人主页、项目档案和不定期博客。",
+    content: loaderData?.profile.customization.siteDescription ?? "Mazha0309 的个人主页与博客。",
   },
   { property: "og:type", content: "website" },
-  { property: "og:title", content: "Mazha0309 — 喵喵喵的数字工作台" },
+  { property: "og:title", content: loaderData?.profile.customization.siteTitle ?? "Mazha0309" },
   {
     property: "og:description",
-    content: "把代码、无线电、怪点子和生活碎片钉在同一块软木板上。",
+    content: loaderData?.profile.customization.siteDescription ?? "Mazha0309 的个人主页与博客。",
   },
 ];
 
@@ -57,15 +57,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Brand() {
+function Brand({
+  displayName,
+  mark,
+  subtitle,
+}: {
+  displayName: string;
+  mark: string;
+  subtitle: string;
+}) {
   return (
-    <NavLink to="/" className="brand" aria-label="Mazha0309 首页">
+    <NavLink to="/" className="brand" aria-label={`${displayName} 首页`}>
       <span className="brand__mark" aria-hidden="true">
-        M
+        {mark}
       </span>
       <span>
-        <strong>MAZHA0309</strong>
-        <small>HOMEPAGE & BLOG</small>
+        <strong>{displayName}</strong>
+        {subtitle ? <small>{subtitle}</small> : null}
       </span>
     </NavLink>
   );
@@ -73,16 +81,21 @@ function Brand() {
 
 export default function App() {
   const { profile, links } = useLoaderData<typeof loader>();
+  const customization = profile.customization;
   const navigation = links.filter((link) => link.kind === "nav" && link.url);
   const socials = links.filter((link) => link.kind === "social" && link.url);
 
   return (
-    <div className="site-frame">
+    <div className="site-frame" data-accent={customization.accentColor}>
       <a className="skip-link" href="#main">
         跳到正文
       </a>
       <header className="site-header">
-        <Brand />
+        <Brand
+          displayName={profile.displayName}
+          mark={customization.brandMark}
+          subtitle={customization.brandSubtitle}
+        />
         <nav className="site-nav" aria-label="主要导航">
           {navigation.map((item) => (
             <NavLink
@@ -108,7 +121,7 @@ export default function App() {
         <div>
           <span className="micro-label">SEE YOU AROUND / {new Date().getFullYear()}</span>
           <p>
-            © {profile.displayName} · 这张纸由 React、PostgreSQL 和一点不必要的执念驱动。
+            © {profile.displayName}{customization.footerText ? ` · ${customization.footerText}` : ""}
           </p>
         </div>
         {socials.length > 0 ? (

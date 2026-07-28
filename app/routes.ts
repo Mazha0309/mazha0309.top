@@ -16,6 +16,7 @@ export default [
   route("sitemap.xml", "routes/sitemap.ts"),
   route("robots.txt", "routes/robots.ts"),
   route("healthz", "routes/health.ts"),
+  route("readyz", "routes/ready.ts"),
   route("media/:id/:filename", "routes/media-file.ts"),
   route("api/auth/*", "routes/api-auth.ts"),
   route("api/search", "routes/api-search.ts"),
@@ -32,9 +33,11 @@ export default [
     route("media", "routes/admin-media.tsx"),
     route("settings", "routes/admin-settings.tsx"),
     route("analytics", "routes/admin-analytics.tsx"),
+    route("system", "routes/admin-system.tsx"),
   ]),
   ...prefix("api/admin", [
     route("posts/:id/autosave", "routes/api-admin-autosave.ts"),
     route("preview", "routes/api-admin-preview.ts"),
+    route("probe", "routes/api-admin-probe.ts"),
   ]),
 ] satisfies RouteConfig;

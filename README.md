@@ -7,7 +7,8 @@ Mazha0309 的动态个人主页 + Blog。它是一张会生长的数字工作台
 - React Router 8 Framework Mode 全栈 SSR
 - PostgreSQL + Drizzle，内容更新不需要重新构建网站
 - Better Auth + GitHub OAuth，仅允许 GitHub 数字 ID `99137842`
-- 自制 CMS：文章、项目、ABOUT、NOW、头像、导航、社交链接、媒体与统计
+- 自制 CMS：文章、项目、ABOUT、NOW、媒体、统计与可视化全站自定义
+- 管理员资源探针：CPU 负载、主机/Node 内存、磁盘、PostgreSQL 延迟/容量/连接池和运行时长
 - 安全 MDX 子集、CodeMirror 6、实时预览、自动保存、版本记录
 - 草稿、独立预览、定时发布、旧 slug 永久跳转
 - PostgreSQL `pg_trgm` 搜索，标题和标签权重高于正文
@@ -15,7 +16,7 @@ Mazha0309 的动态个人主页 + Blog。它是一张会生长的数字工作台
 - Giscus 评论，稳定映射为 `post:<uuid>`
 - 固定暖纸张主题，不提供容易破坏手账配色的深色模式
 - 自托管小赖字体，常用简体中文完整覆盖，生僻字回退思源黑体
-- RSS、Sitemap、健康检查和隐私友好的日聚合统计
+- RSS、Sitemap、存活/就绪探针和隐私友好的日聚合统计
 - Docker 开发与生产编排、Caddy 示例、GHCR 自动部署和失败回滚
 - CMS + 媒体备份；明确排除登录、Session、OAuth Token 与分析数据
 
@@ -29,7 +30,10 @@ docker compose -f compose.dev.yaml up --build
 
 - 公开站点：<http://localhost:5173>
 - 本地后台：<http://localhost:5173/admin>
-- 健康检查：<http://localhost:5173/healthz>
+- 全站自定义：<http://localhost:5173/admin/settings>
+- 资源探针：<http://localhost:5173/admin/system>
+- 存活检查：<http://localhost:5173/healthz>
+- 就绪检查：<http://localhost:5173/readyz>
 
 开发 Compose 默认启用 `DEV_ADMIN_BYPASS=true`，仅在 `NODE_ENV=development` 下生效。若 `5173` 已占用：
 
@@ -70,6 +74,7 @@ npm run dev
 - `/sitemap.xml`
 - `/robots.txt`
 - `/healthz`
+- `/readyz`
 
 后台路由：
 
@@ -80,6 +85,9 @@ npm run dev
 - `/admin/media`
 - `/admin/settings`
 - `/admin/analytics`
+- `/admin/system`
+
+`/healthz` 只判断 Node 进程是否存活；`/readyz` 判断 PostgreSQL 与媒体卷是否可用。CPU、内存、磁盘路径、主机名和数据库连接池等详细信息只在管理员页面及受保护的 `/api/admin/probe` 返回。
 
 文章中的 MDX 支持普通 Markdown、GFM，以及：
 
@@ -184,7 +192,7 @@ GISCUS_CATEGORY_ID=...
 3. SSH 到 VPS
 4. 执行数据库迁移与幂等 Seed
 5. 重启 `app`，保留 PostgreSQL 和媒体卷
-6. 容器内检查 `/healthz`
+6. 容器内检查 `/readyz`
 7. 失败时把应用容器退回上一个镜像
 
 在仓库 `production` Environment 或 Actions Secrets 配置：
@@ -251,7 +259,7 @@ npm run build
 npm run test:e2e
 ```
 
-`test:e2e` 覆盖桌面与手机、首页、空博客初始状态和搜索。
+`test:e2e` 覆盖桌面与手机、首页、空博客初始状态、搜索、公开存活检查，以及详细资源探针的登录保护。
 
 ## 技术说明
 

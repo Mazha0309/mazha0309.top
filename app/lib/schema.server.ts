@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { SiteCustomization } from "./types";
 
 export const siteProfiles = pgTable("site_profiles", {
   id: text("id").primaryKey().default("main"),
@@ -24,6 +25,10 @@ export const siteProfiles = pgTable("site_profiles", {
   location: text("location").notNull().default("Internet"),
   statusText: text("status_text").notNull().default("折腾中"),
   email: text("email").notNull().default(""),
+  customization: jsonb("customization")
+    .$type<Partial<SiteCustomization>>()
+    .notNull()
+    .default({}),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

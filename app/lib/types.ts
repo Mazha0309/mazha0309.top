@@ -1,5 +1,35 @@
 export type PublishStatus = "draft" | "scheduled" | "published";
 
+export type SiteAccent = "pink" | "blue" | "mint" | "purple" | "orange";
+
+export interface SiteCustomization {
+  siteTitle: string;
+  siteDescription: string;
+  brandMark: string;
+  brandSubtitle: string;
+  footerText: string;
+  heroKicker: string;
+  primaryActionLabel: string;
+  primaryActionUrl: string;
+  secondaryActionLabel: string;
+  secondaryActionUrl: string;
+  marqueeText: string;
+  projectsEyebrow: string;
+  projectsTitle: string;
+  blogEyebrow: string;
+  blogTitle: string;
+  nowEyebrow: string;
+  nowTitle: string;
+  signoffText: string;
+  signoffLinkLabel: string;
+  signoffLinkUrl: string;
+  accentColor: SiteAccent;
+  showProjects: boolean;
+  showBlog: boolean;
+  showNow: boolean;
+  showSignoff: boolean;
+}
+
 export interface SiteProfile {
   id: string;
   displayName: string;
@@ -12,6 +42,7 @@ export interface SiteProfile {
   location: string;
   statusText: string;
   email: string;
+  customization: SiteCustomization;
   updatedAt?: Date | string;
 }
 
