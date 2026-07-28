@@ -11,6 +11,9 @@ test("homepage exposes the identity and featured projects", async ({ page }) => 
   await expect(
     page.getByRole("link", { name: "打开管理员后台" }),
   ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "登录管理员后台" }),
+  ).toHaveAttribute("href", "/admin/login");
 });
 
 test("blog starts empty for the owner to write", async ({ page }) => {

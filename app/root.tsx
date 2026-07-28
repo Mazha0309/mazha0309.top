@@ -130,7 +130,16 @@ export default function App() {
               <span aria-hidden="true">✎</span>
               <span className="tool-button__text">ADMIN</span>
             </NavLink>
-          ) : null}
+          ) : (
+            <NavLink
+              className="tool-button login-tool-button"
+              to="/admin/login"
+              aria-label="登录管理员后台"
+            >
+              <span aria-hidden="true">登</span>
+              <span className="tool-button__text">LOGIN</span>
+            </NavLink>
+          )}
           <SearchPalette />
         </div>
       </header>

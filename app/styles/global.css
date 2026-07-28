@@ -291,6 +291,10 @@ img {
   background: var(--pink-soft);
 }
 
+.login-tool-button {
+  background: var(--yellow-soft);
+}
+
 .tool-button > span:first-child {
   font-family: var(--font-body);
   font-size: 1.15rem;
