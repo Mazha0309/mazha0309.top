@@ -815,8 +815,23 @@ img {
 }
 
 .project-card__symbol--ticket {
-  --icon-clip: polygon(0 0, 100% 0, 100% 34%, 88% 50%, 100% 66%, 100% 100%, 0 100%, 0 66%, 12% 50%, 0 34%);
-  border-radius: 8px 22px 8px 22px;
+  --icon-clip: polygon(
+    6% 0,
+    94% 0,
+    100% 6%,
+    100% 34%,
+    88% 50%,
+    100% 66%,
+    100% 94%,
+    94% 100%,
+    6% 100%,
+    0 94%,
+    0 66%,
+    12% 50%,
+    0 34%,
+    0 6%
+  );
+  border-radius: 0;
   clip-path: var(--icon-clip);
   transform: rotate(2deg);
 }
