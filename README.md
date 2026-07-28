@@ -7,7 +7,8 @@ Mazha0309 的动态个人主页 + Blog。它是一张会生长的数字工作台
 - React Router 8 Framework Mode 全栈 SSR
 - PostgreSQL + Drizzle，内容更新不需要重新构建网站
 - Better Auth + GitHub OAuth，仅允许 GitHub 数字 ID `99137842`
-- 自制 CMS：文章、项目、ABOUT、NOW、媒体、统计与可视化全站自定义
+- 自制 CMS：文章、项目、友链、ABOUT、NOW、媒体、统计与可视化全站自定义
+- 项目图标支持固定预设、稳定随机、短文字 / Emoji、自定义图片和 9 种外框
 - 管理员资源探针：CPU 负载、主机/Node 内存、磁盘、PostgreSQL 延迟/容量/连接池和运行时长
 - 安全 MDX 子集、CodeMirror 6、实时预览、自动保存、版本记录
 - 草稿、独立预览、定时发布、旧 slug 永久跳转
@@ -68,6 +69,7 @@ npm run dev
 - `/blog`
 - `/blog/:slug`
 - `/projects`
+- `/friends`
 - `/about`
 - `/search?q=`
 - `/rss.xml`
@@ -81,6 +83,7 @@ npm run dev
 - `/admin`
 - `/admin/posts`
 - `/admin/projects`
+- `/admin/friends`
 - `/admin/pages`
 - `/admin/media`
 - `/admin/settings`
@@ -222,7 +225,7 @@ GHCR Package 首次出现后，把可见性设为 Public；若保持 Private，�
 
 - 站点身份、导航、社交链接
 - 文章、旧 slug、版本记录
-- 项目、ABOUT、NOW
+- 项目、友链、ABOUT、NOW
 - 媒体元数据和 `/data/media`
 - 校验和
 
@@ -259,7 +262,7 @@ npm run build
 npm run test:e2e
 ```
 
-`test:e2e` 覆盖桌面与手机、首页、空博客初始状态、搜索、公开存活检查，以及详细资源探针的登录保护。
+`test:e2e` 覆盖桌面与手机、首页、空博客、友链空状态、搜索、公开存活检查，以及详细资源探针的登录保护。
 
 ## 技术说明
 

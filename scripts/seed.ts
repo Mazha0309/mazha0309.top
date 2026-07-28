@@ -48,6 +48,17 @@ async function main() {
       await db.insert(contentLinks).values(values);
     }
   }
+  const [friendsNavigation] = await db
+    .select({ id: contentLinks.id })
+    .from(contentLinks)
+    .where(eq(contentLinks.url, "/friends"))
+    .limit(1);
+  if (!friendsNavigation) {
+    const { id: _id, ...values } = fallbackLinks.find(
+      (link) => link.url === "/friends",
+    )!;
+    await db.insert(contentLinks).values(values);
+  }
 
   await db
     .delete(posts)
@@ -73,6 +84,9 @@ async function main() {
         liveUrl: project.liveUrl,
         coverUrl: project.coverUrl,
         accent: project.accent,
+        iconMode: project.iconMode,
+        iconValue: project.iconValue,
+        iconShape: project.iconShape,
         featured: project.featured,
         position: project.position,
         statusLabel: project.statusLabel,

@@ -3,6 +3,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import {
   getAnalytics,
   listAdminPosts,
+  listFriendLinks,
   listMedia,
   listProjects,
 } from "../lib/content.server";
@@ -11,9 +12,10 @@ import { collectSystemProbe } from "../lib/system-probe.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await requireAdmin(request);
-  const [posts, projects, media, analytics, probe] = await Promise.all([
+  const [posts, projects, friends, media, analytics, probe] = await Promise.all([
     listAdminPosts(),
     listProjects(),
+    listFriendLinks({ includeDisabled: true }),
     listMedia(),
     getAnalytics(7),
     collectSystemProbe(),
@@ -23,6 +25,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       posts: posts.length,
       drafts: posts.filter((post) => post.status === "draft").length,
       projects: projects.length,
+      friends: friends.length,
       media: media.length,
       views: analytics.reduce((sum, row) => sum + row.views, 0),
     },
@@ -46,6 +49,7 @@ export default function AdminDashboard({
       <div className="admin-stat-grid">
         <article><span>POSTS</span><strong>{loaderData.counts.posts}</strong><small>{loaderData.counts.drafts} 份草稿</small></article>
         <article><span>PROJECTS</span><strong>{loaderData.counts.projects}</strong><small>项目档案</small></article>
+        <article><span>FRIENDS</span><strong>{loaderData.counts.friends}</strong><small>友链名片</small></article>
         <article><span>MEDIA</span><strong>{loaderData.counts.media}</strong><small>媒体文件</small></article>
         <article><span>7D VIEWS</span><strong>{loaderData.counts.views}</strong><small>尊重 DNT / GPC</small></article>
       </div>
@@ -96,6 +100,7 @@ export default function AdminDashboard({
       <section className="quick-action-grid" aria-label="常用操作">
         <Link to="/admin/settings"><span>✦</span><strong>调整主页</strong><small>品牌、文案、模块和链接</small></Link>
         <Link to="/admin/projects"><span>◇</span><strong>整理项目</strong><small>排序、状态与展示卡片</small></Link>
+        <Link to="/admin/friends"><span>♡</span><strong>交换友链</strong><small>名片、头像与公开状态</small></Link>
         <Link to="/admin/media"><span>▧</span><strong>上传图片</strong><small>自动生成 WebP / AVIF</small></Link>
       </section>
     </>

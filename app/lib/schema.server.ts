@@ -130,6 +130,27 @@ export const projects = pgTable(
     liveUrl: text("live_url"),
     coverUrl: text("cover_url"),
     accent: text("accent").notNull().default("pink"),
+    iconMode: text("icon_mode", {
+      enum: ["random", "preset", "custom", "image"],
+    })
+      .notNull()
+      .default("random"),
+    iconValue: text("icon_value").notNull().default("spark"),
+    iconShape: text("icon_shape", {
+      enum: [
+        "random",
+        "blob",
+        "circle",
+        "rounded",
+        "diamond",
+        "hexagon",
+        "ticket",
+        "burst",
+        "flower",
+      ],
+    })
+      .notNull()
+      .default("random"),
     featured: boolean("featured").notNull().default(false),
     position: integer("position").notNull().default(0),
     statusLabel: text("status_label").notNull().default("MAKING"),
@@ -143,6 +164,30 @@ export const projects = pgTable(
   (table) => [
     uniqueIndex("projects_slug_idx").on(table.slug),
     index("projects_position_idx").on(table.position),
+  ],
+);
+
+export const friendLinks = pgTable(
+  "friend_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    avatarUrl: text("avatar_url"),
+    description: text("description").notNull().default(""),
+    accent: text("accent").notNull().default("pink"),
+    position: integer("position").notNull().default(0),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("friend_links_position_idx").on(table.position),
+    uniqueIndex("friend_links_url_idx").on(table.url),
   ],
 );
 

@@ -1,4 +1,5 @@
 import type { ProjectRecord } from "../lib/types";
+import { ProjectIconMark } from "./project-icon-mark";
 
 export function ProjectCard({
   project,
@@ -19,9 +20,7 @@ export function ProjectCard({
         </span>
         <span className="project-card__status">{project.statusLabel}</span>
       </header>
-      <div className="project-card__symbol" aria-hidden="true">
-        {index % 3 === 0 ? "⌁" : index % 3 === 1 ? "※" : "↗"}
-      </div>
+      <ProjectIconMark project={project} />
       <h3>{project.title}</h3>
       <p>{project.summary}</p>
       <div className="tag-list">

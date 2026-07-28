@@ -23,6 +23,16 @@ test("global search finds seeded content", async ({ page }) => {
   await expect(page.getByRole("link", { name: "RelayQR" })).toBeVisible();
 });
 
+test("friend exchange page has a real empty state before links are added", async ({
+  page,
+}) => {
+  await page.goto("/friends");
+  await expect(
+    page.getByRole("heading", { name: "互联网邻居交换所" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "友链板刚擦干净" })).toBeVisible();
+});
+
 test("public liveness probe stays minimal", async ({ request }) => {
   const response = await request.get("/healthz");
   expect(response.ok()).toBe(true);
