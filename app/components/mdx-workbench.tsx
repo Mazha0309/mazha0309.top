@@ -1,6 +1,52 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
+import { redo, redoDepth, undo, undoDepth } from "@codemirror/commands";
+import type { EditorView } from "@codemirror/view";
 import { useEffect, useRef, useState } from "react";
+import {
+  createMarkdownEdit,
+  type MarkdownFormat,
+} from "../lib/markdown-editor";
+
+const formattingGroups: {
+  label: string;
+  actions: { format: MarkdownFormat; label: string; title: string }[];
+}[] = [
+  {
+    label: "标题",
+    actions: [
+      { format: "heading-1", label: "H1", title: "一级标题" },
+      { format: "heading-2", label: "H2", title: "二级标题" },
+      { format: "heading-3", label: "H3", title: "三级标题" },
+    ],
+  },
+  {
+    label: "行内样式",
+    actions: [
+      { format: "bold", label: "B", title: "加粗" },
+      { format: "italic", label: "I", title: "斜体" },
+      { format: "strike", label: "S", title: "删除线" },
+      { format: "inline-code", label: "` `", title: "行内代码" },
+    ],
+  },
+  {
+    label: "段落",
+    actions: [
+      { format: "quote", label: "❞", title: "引用" },
+      { format: "bullet-list", label: "•", title: "无序列表" },
+      { format: "ordered-list", label: "1.", title: "有序列表" },
+      { format: "task-list", label: "☑", title: "任务列表" },
+      { format: "code-block", label: "</>", title: "代码块" },
+    ],
+  },
+  {
+    label: "插入",
+    actions: [
+      { format: "link", label: "↗", title: "链接" },
+      { format: "image", label: "▧", title: "图片" },
+    ],
+  },
+];
 
 export function MdxWorkbench({
   postId,
@@ -17,8 +63,44 @@ export function MdxWorkbench({
   const [autosave, setAutosave] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
+  const [historyState, setHistoryState] = useState({ undo: false, redo: false });
   const initial = useRef(true);
   const previewController = useRef<AbortController | null>(null);
+  const editor = useRef<EditorView | null>(null);
+
+  function refreshHistory(view: EditorView) {
+    setHistoryState({
+      undo: undoDepth(view.state) > 0,
+      redo: redoDepth(view.state) > 0,
+    });
+  }
+
+  function runHistory(command: typeof undo) {
+    const view = editor.current;
+    if (!view) return;
+    command(view);
+    view.focus();
+    refreshHistory(view);
+  }
+
+  function applyFormat(format: MarkdownFormat) {
+    const view = editor.current;
+    if (!view) return;
+    const selection = view.state.selection.main;
+    const edit = createMarkdownEdit(
+      view.state.doc.toString(),
+      { from: selection.from, to: selection.to },
+      format,
+    );
+    view.dispatch({
+      changes: { from: edit.from, to: edit.to, insert: edit.insert },
+      selection: { anchor: edit.anchor, head: edit.head },
+      scrollIntoView: true,
+      userEvent: "input",
+    });
+    view.focus();
+    refreshHistory(view);
+  }
 
   useEffect(() => {
     if (initial.current) {
@@ -91,12 +173,63 @@ export function MdxWorkbench({
                   : "等待输入"}
           </small>
         </header>
+        <div className="markdown-toolbar" role="toolbar" aria-label="Markdown 格式工具">
+          <div className="markdown-toolbar__group" aria-label="撤销与重做">
+            <button
+              type="button"
+              title="撤销（Ctrl/Cmd + Z）"
+              aria-label="撤销"
+              disabled={!historyState.undo}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => runHistory(undo)}
+            >
+              ↶
+            </button>
+            <button
+              type="button"
+              title="重做（Ctrl/Cmd + Shift + Z）"
+              aria-label="重做"
+              disabled={!historyState.redo}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => runHistory(redo)}
+            >
+              ↷
+            </button>
+          </div>
+          {formattingGroups.map((group) => (
+            <div
+              className="markdown-toolbar__group"
+              aria-label={group.label}
+              key={group.label}
+            >
+              {group.actions.map((action) => (
+                <button
+                  type="button"
+                  title={action.title}
+                  aria-label={action.title}
+                  key={action.format}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => applyFormat(action.format)}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
         <textarea name="contentMdx" value={source} readOnly hidden />
         <CodeMirror
           value={source}
           height="640px"
           extensions={[markdown()]}
-          onChange={setSource}
+          onCreateEditor={(view) => {
+            editor.current = view;
+            refreshHistory(view);
+          }}
+          onChange={(value, viewUpdate) => {
+            setSource(value);
+            refreshHistory(viewUpdate.view);
+          }}
           basicSetup={{
             lineNumbers: true,
             foldGutter: true,

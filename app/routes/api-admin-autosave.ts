@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
-import { getAdminPost, savePost } from "../lib/content.server";
+import { autosavePostContent, getAdminPost } from "../lib/content.server";
 import { requireAdmin } from "../lib/auth.server";
 import { validateMdx } from "../lib/mdx.server";
 import { requireSameOrigin } from "../lib/security.server";
@@ -16,21 +16,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
   try {
     validateMdx(body.contentMdx);
-    await savePost(
-      post.id,
-      {
-        title: post.title,
-        slug: post.slug,
-        summary: post.summary,
-        contentMdx: body.contentMdx,
-        tags: post.tags,
-        coverUrl: post.coverUrl ?? null,
-        status: post.status,
-        featured: post.featured,
-        scheduledAt: post.scheduledAt ? new Date(post.scheduledAt) : null,
-      },
-      "autosave",
-    );
+    await autosavePostContent(post.id, body.contentMdx);
     return Response.json({ ok: true, savedAt: new Date().toISOString() });
   } catch (error) {
     return Response.json(

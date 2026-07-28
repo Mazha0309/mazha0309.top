@@ -2018,6 +2018,68 @@ img {
   font-size: 0.62rem;
 }
 
+.markdown-toolbar {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border-bottom: 2px solid var(--ink);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--yellow-soft) 78%, var(--paper-raised)),
+      var(--paper-soft)
+    );
+}
+
+.markdown-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 0.24rem;
+  padding-right: 0.35rem;
+  border-right: 1px dashed var(--ink-muted);
+}
+
+.markdown-toolbar__group:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.markdown-toolbar button {
+  display: inline-grid;
+  min-width: 31px;
+  height: 29px;
+  place-items: center;
+  padding: 0 0.38rem;
+  cursor: pointer;
+  border: 1.5px solid var(--ink);
+  border-radius: 7px 9px 6px 8px;
+  background: var(--paper-raised);
+  box-shadow: 1px 2px 0 var(--ink);
+  color: var(--ink);
+  font-family: var(--font-system);
+  font-size: 0.68rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.markdown-toolbar button:hover:not(:disabled) {
+  background: var(--pink-soft);
+  transform: translate(-1px, -1px);
+}
+
+.markdown-toolbar button:active:not(:disabled) {
+  box-shadow: none;
+  transform: translate(1px, 2px);
+}
+
+.markdown-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.34;
+  box-shadow: none;
+}
+
 .editor-pane .cm-editor {
   max-width: 100%;
   color: var(--ink);
@@ -2200,6 +2262,14 @@ img {
   overflow-wrap: anywhere;
   color: var(--ink-muted);
   font-size: 0.65rem;
+}
+
+.media-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.35rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--line);
 }
 
 .analytics-list > div {
@@ -3357,6 +3427,22 @@ img {
 
   .sticky-savebar {
     bottom: 0.35rem;
+  }
+
+  .markdown-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .markdown-toolbar__group {
+    flex: 0 0 auto;
+  }
+
+  .markdown-toolbar button {
+    min-width: 40px;
+    height: 40px;
   }
 
   .analytics-list > div {

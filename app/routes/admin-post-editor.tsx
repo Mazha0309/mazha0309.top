@@ -1,4 +1,5 @@
 import { Form, Link, useActionData, useNavigation } from "react-router";
+import { useEffect, useState } from "react";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -44,7 +45,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     if (status === "scheduled" && !scheduledAt) {
       return { ok: false, error: "定时发布必须选择一个有效时间。" };
     }
-    await savePost(params.id, {
+    const saved = await savePost(params.id, {
       title: formString(form, "title", { required: true, max: 160 }),
       slug: formString(form, "slug", { max: 96 }),
       summary: formString(form, "summary", { max: 320 }),
@@ -55,7 +56,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
       featured: form.get("featured") === "on",
       scheduledAt,
     });
-    return { ok: true, message: "已经压进数据库抽屉。" };
+    const message =
+      saved.status === "published"
+        ? "已经贴到公开博客上啦。"
+        : saved.status === "scheduled"
+          ? "定时贴纸已安排，到点会自动公开。"
+          : "草稿已经压进数据库抽屉。";
+    return { ok: true, status: saved.status, message };
   } catch (error) {
     return {
       ok: false,
@@ -80,6 +87,18 @@ export default function AdminPostEditor({
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const saving = navigation.state !== "idle";
+  const [status, setStatus] = useState(post.status);
+
+  useEffect(() => {
+    setStatus(post.status);
+  }, [post.id, post.status]);
+
+  const saveLabel =
+    status === "published"
+      ? "立即公开这张纸"
+      : status === "scheduled"
+        ? "安排定时发布"
+        : "保存为草稿";
 
   return (
     <>
@@ -114,7 +133,18 @@ export default function AdminPostEditor({
             </label>
             <label className="field">
               <span>状态 <small>STATE</small></span>
-              <select name="status" defaultValue={post.status}>
+              <select
+                name="status"
+                value={status}
+                onChange={(event) =>
+                  setStatus(
+                    event.currentTarget.value as
+                      | "draft"
+                      | "scheduled"
+                      | "published",
+                  )
+                }
+              >
                 <option value="draft">草稿 / DRAFT</option>
                 <option value="scheduled">定时 / SCHEDULED</option>
                 <option value="published">公开 / PUBLISHED</option>
@@ -122,7 +152,12 @@ export default function AdminPostEditor({
             </label>
             <label className="field">
               <span>定时时间 <small>LOCAL TIME</small></span>
-              <input name="scheduledAt" type="datetime-local" defaultValue={datetimeValue(post.scheduledAt)} />
+              <input
+                name="scheduledAt"
+                type="datetime-local"
+                defaultValue={datetimeValue(post.scheduledAt)}
+                required={status === "scheduled"}
+              />
             </label>
             <label className="field field--wide">
               <span>封面 URL <small>OPTIONAL</small></span>
@@ -143,7 +178,7 @@ export default function AdminPostEditor({
             {actionData && !actionData.ok ? <span className="form-message form-message--error">{actionData.error}</span> : null}
           </div>
           <button className="button button--primary" type="submit" disabled={saving}>
-            {saving ? "保存中…" : "保存整张纸"}
+            {saving ? "保存中…" : saveLabel}
           </button>
         </div>
       </Form>
