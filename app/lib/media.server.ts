@@ -1,7 +1,12 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { createMediaRecord } from "./content.server";
+import {
+  createMediaRecord,
+  deleteMediaRecords,
+  findMediaReferences,
+  getMediaRecord,
+} from "./content.server";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
@@ -68,6 +73,32 @@ export async function storeImage(file: File, alt: string) {
       avif: `/media/${id}/${avifName}`,
     },
   });
+}
+
+export async function deleteStoredImage(id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    throw new Error("图片编号无效。");
+  }
+  const record = await getMediaRecord(id);
+  if (!record) throw new Error("这张图片已经不在媒体抽屉里了。");
+
+  const storageId = record.storageKey.split("/")[0];
+  if (!/^[0-9a-f-]{36}$/i.test(storageId)) {
+    throw new Error("图片存储目录无效，已拒绝删除。");
+  }
+  const references = await findMediaReferences(storageId);
+  if (references.length) {
+    const visible = references.slice(0, 4).join("、");
+    const remaining =
+      references.length > 4 ? `等 ${references.length} 处` : "";
+    throw new Error(
+      `暂时不能删除：仍被 ${visible}${remaining} 使用。先移除引用再来取下它。`,
+    );
+  }
+
+  await deleteMediaRecords([id]);
+  await rm(path.join(mediaRoot(), storageId), { recursive: true, force: true });
+  return record;
 }
 
 export async function readMediaFile(id: string, filename: string) {

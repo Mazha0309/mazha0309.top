@@ -1,5 +1,6 @@
 import { Form, useActionData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { useEffect, useRef, useState } from "react";
 import {
   deleteProject,
   listProjects,
@@ -31,7 +32,12 @@ export async function action({ request }: ActionFunctionArgs) {
   try {
     if (intent === "delete" && id) {
       await deleteProject(id);
-      return { ok: true, message: "项目卡片已删除。" };
+      return {
+        ok: true,
+        intent,
+        recordId: id,
+        message: "项目卡片已删除。",
+      };
     }
     const bodyMdx = formString(form, "bodyMdx");
     validateMdx(bodyMdx);
@@ -62,7 +68,12 @@ export async function action({ request }: ActionFunctionArgs) {
       featured: form.get("featured") === "on",
       position: Number(formString(form, "position", { max: 8 })) || 0,
     });
-    return { ok: true, message: `已保存 ${project.title}。` };
+    return {
+      ok: true,
+      intent,
+      recordId: project.id,
+      message: `已保存 ${project.title}。`,
+    };
   } catch (error) {
     return {
       ok: false,
@@ -142,6 +153,20 @@ export default function AdminProjects({
   loaderData: Awaited<ReturnType<typeof loader>>;
 }) {
   const actionData = useActionData<typeof action>();
+  const [createFormKey, setCreateFormKey] = useState(0);
+  const handledCreate = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      actionData?.ok &&
+      actionData.intent === "new" &&
+      actionData.recordId !== handledCreate.current
+    ) {
+      handledCreate.current = actionData.recordId;
+      setCreateFormKey((current) => current + 1);
+    }
+  }, [actionData]);
+
   return (
     <>
       <header className="admin-heading">
@@ -153,7 +178,7 @@ export default function AdminProjects({
       {actionData && !actionData.ok ? <p className="form-message form-message--error">{actionData.error}</p> : null}
       <details className="admin-panel create-panel">
         <summary>＋ 新建项目卡片</summary>
-        <Form method="post">
+        <Form method="post" key={createFormKey}>
           <ProjectFields />
           <button className="button button--primary" name="intent" value="new">创建项目</button>
         </Form>

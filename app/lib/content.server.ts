@@ -4,6 +4,7 @@ import {
   desc,
   eq,
   inArray,
+  like,
   lte,
   or,
   sql,
@@ -434,6 +435,45 @@ export async function savePost(
   return saved;
 }
 
+export async function autosavePostContent(id: string, contentMdx: string) {
+  if (!hasDatabase()) {
+    throw new Error("文章写入需要数据库。");
+  }
+  const db = getDb();
+  const [current] = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
+  if (!current) throw new Response("Post not found", { status: 404 });
+  if (current.contentMdx === contentMdx) return current;
+
+  return db.transaction(async (tx) => {
+    await tx.insert(postRevisions).values({
+      postId: current.id,
+      title: current.title,
+      summary: current.summary,
+      contentMdx: current.contentMdx,
+      reason: "autosave",
+      snapshot: {
+        slug: current.slug,
+        tags: current.tags,
+        status: current.status,
+        coverUrl: current.coverUrl,
+        featured: current.featured,
+        scheduledAt: current.scheduledAt,
+      },
+    });
+
+    const [saved] = await tx
+      .update(posts)
+      .set({
+        contentMdx,
+        contentText: mdxToText(contentMdx),
+        updatedAt: new Date(),
+      })
+      .where(eq(posts.id, id))
+      .returning();
+    return saved;
+  });
+}
+
 export async function deletePost(id: string) {
   if (!hasDatabase()) throw new Error("文章写入需要数据库。");
   await getDb().delete(posts).where(eq(posts.id, id));
@@ -568,6 +608,77 @@ export async function listMedia() {
     .select()
     .from(media)
     .orderBy(desc(media.createdAt))) as MediaRecord[];
+}
+
+export async function getMediaRecord(id: string) {
+  if (!hasDatabase()) return null;
+  const [record] = await getDb()
+    .select()
+    .from(media)
+    .where(eq(media.id, id))
+    .limit(1);
+  return (record as MediaRecord | undefined) ?? null;
+}
+
+export async function findMediaReferences(storageId: string) {
+  if (!hasDatabase()) return [];
+  const pattern = `%/media/${storageId}/%`;
+  const db = getDb();
+  const [
+    profileRows,
+    postRows,
+    projectRows,
+    friendRows,
+    pageRows,
+    linkRows,
+  ] = await Promise.all([
+    db
+      .select({ label: siteProfiles.displayName })
+      .from(siteProfiles)
+      .where(
+        or(
+          like(siteProfiles.avatarUrl, pattern),
+          sql`${siteProfiles.customization}::text like ${pattern}`,
+        ),
+      ),
+    db
+      .select({ label: posts.title })
+      .from(posts)
+      .where(
+        or(like(posts.coverUrl, pattern), like(posts.contentMdx, pattern)),
+      ),
+    db
+      .select({ label: projects.title })
+      .from(projects)
+      .where(
+        or(
+          like(projects.coverUrl, pattern),
+          like(projects.bodyMdx, pattern),
+          like(projects.iconValue, pattern),
+        ),
+      ),
+    db
+      .select({ label: friendLinks.name })
+      .from(friendLinks)
+      .where(like(friendLinks.avatarUrl, pattern)),
+    db
+      .select({ label: pages.title })
+      .from(pages)
+      .where(like(pages.contentMdx, pattern)),
+    db
+      .select({ label: contentLinks.label })
+      .from(contentLinks)
+      .where(like(contentLinks.url, pattern)),
+  ]);
+
+  return [
+    ...profileRows.map(({ label }) => `站点资料「${label}」`),
+    ...postRows.map(({ label }) => `文章「${label}」`),
+    ...projectRows.map(({ label }) => `项目「${label}」`),
+    ...friendRows.map(({ label }) => `友链「${label}」`),
+    ...pageRows.map(({ label }) => `页面「${label}」`),
+    ...linkRows.map(({ label }) => `导航「${label}」`),
+  ];
 }
 
 export async function createMediaRecord(

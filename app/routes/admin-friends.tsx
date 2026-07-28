@@ -1,5 +1,6 @@
 import { Form, useActionData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { useEffect, useRef, useState } from "react";
 import {
   deleteFriendLink,
   listFriendLinks,
@@ -29,7 +30,12 @@ export async function action({ request }: ActionFunctionArgs) {
   try {
     if (intent === "delete" && id) {
       await deleteFriendLink(id);
-      return { ok: true, message: "这张友链名片已经取下来了。" };
+      return {
+        ok: true,
+        intent,
+        recordId: id,
+        message: "这张友链名片已经取下来了。",
+      };
     }
     const url = formString(form, "url", { required: true, max: 600 });
     const avatarUrl = formString(form, "avatarUrl", { max: 600 });
@@ -52,7 +58,12 @@ export async function action({ request }: ActionFunctionArgs) {
       position: Number.isFinite(position) ? Math.trunc(position) : 0,
       enabled: form.get("enabled") === "on",
     });
-    return { ok: true, message: `已经挂好 ${friend.name} 的名片。` };
+    return {
+      ok: true,
+      intent,
+      recordId: friend.id,
+      message: `已经挂好 ${friend.name} 的名片。`,
+    };
   } catch (error) {
     if (
       typeof error === "object" &&
@@ -123,6 +134,20 @@ export default function AdminFriends({
   loaderData: Awaited<ReturnType<typeof loader>>;
 }) {
   const actionData = useActionData<typeof action>();
+  const [createFormKey, setCreateFormKey] = useState(0);
+  const handledCreate = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      actionData?.ok &&
+      actionData.intent === "new" &&
+      actionData.recordId !== handledCreate.current
+    ) {
+      handledCreate.current = actionData.recordId;
+      setCreateFormKey((current) => current + 1);
+    }
+  }, [actionData]);
+
   return (
     <>
       <header className="admin-heading">
@@ -136,7 +161,7 @@ export default function AdminFriends({
       {actionData && !actionData.ok ? <p className="form-message form-message--error">{actionData.error}</p> : null}
       <details className="admin-panel create-panel">
         <summary>＋ 挂一张新名片</summary>
-        <Form method="post">
+        <Form method="post" key={createFormKey}>
           <FriendFields />
           <button className="button button--primary" name="intent" value="new">
             添加友链
