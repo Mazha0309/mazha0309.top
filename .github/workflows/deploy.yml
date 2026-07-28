@@ -14,7 +14,8 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  # OCI registry repository names must be lowercase.
+  IMAGE_NAME: ghcr.io/mazha0309/mazha0309.top
 
 jobs:
   image:
