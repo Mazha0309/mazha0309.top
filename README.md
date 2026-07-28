@@ -179,7 +179,7 @@ GISCUS_CATEGORY_ID=...
 `main` 每次更新会：
 
 1. 构建并测试 Docker 镜像
-2. 推送 `ghcr.io/Mazha0309/mazha0309.top:<commit-sha>`
+2. 推送 `ghcr.io/mazha0309/mazha0309.top:<commit-sha>`
 3. SSH 到 VPS
 4. 执行数据库迁移与幂等 Seed
 5. 重启 `app`，保留 PostgreSQL 和媒体卷
