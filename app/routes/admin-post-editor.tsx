@@ -6,6 +6,7 @@ import type {
 } from "react-router";
 import {
   getAdminPost,
+  listMedia,
   listPostRevisions,
   savePost,
   splitTags,
@@ -21,11 +22,22 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   if (!params.id) throw new Response("Not found", { status: 404 });
   const post = await getAdminPost(params.id);
   if (!post) throw new Response("Not found", { status: 404 });
-  const [html, revisions] = await Promise.all([
+  const [html, revisions, media] = await Promise.all([
     renderSafeMdx(post.contentMdx),
     listPostRevisions(post.id),
+    listMedia(),
   ]);
-  return { post, html, revisions };
+  return {
+    post,
+    html,
+    revisions,
+    media: media.map((item) => ({
+      id: item.id,
+      alt: item.alt,
+      name: item.originalName,
+      url: item.variants.webp ?? item.variants.original,
+    })),
+  };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -83,7 +95,7 @@ export default function AdminPostEditor({
 }: {
   loaderData: Awaited<ReturnType<typeof loader>>;
 }) {
-  const { post, html, revisions } = loaderData;
+  const { post, html, revisions, media } = loaderData;
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const saving = navigation.state !== "idle";
@@ -170,8 +182,6 @@ export default function AdminPostEditor({
           </div>
         </section>
 
-        <MdxWorkbench postId={post.id} initialSource={post.contentMdx} initialHtml={html} />
-
         <div className="sticky-savebar">
           <div>
             {actionData?.ok ? <span className="form-message form-message--success">{actionData.message}</span> : null}
@@ -181,6 +191,13 @@ export default function AdminPostEditor({
             {saving ? "保存中…" : saveLabel}
           </button>
         </div>
+
+        <MdxWorkbench
+          postId={post.id}
+          initialSource={post.contentMdx}
+          initialHtml={html}
+          media={media}
+        />
       </Form>
       <details className="admin-panel revisions-panel">
         <summary>近期版本记录（{revisions.length}）</summary>

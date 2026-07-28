@@ -1,4 +1,5 @@
 export type MarkdownFormat =
+  | "paragraph"
   | "heading-1"
   | "heading-2"
   | "heading-3"
@@ -12,7 +13,9 @@ export type MarkdownFormat =
   | "task-list"
   | "code-block"
   | "link"
-  | "image";
+  | "image"
+  | "horizontal-rule"
+  | "table";
 
 export type MarkdownEdit = {
   from: number;
@@ -31,6 +34,17 @@ function wrapSelection(
   placeholder: string,
 ): MarkdownEdit {
   const selected = source.slice(from, to);
+  const wrappedBefore = source.slice(Math.max(0, from - before.length), from);
+  const wrappedAfter = source.slice(to, to + after.length);
+  if (selected && wrappedBefore === before && wrappedAfter === after) {
+    return {
+      from: from - before.length,
+      to: to + after.length,
+      insert: selected,
+      anchor: from - before.length,
+      head: to - before.length,
+    };
+  }
   const content = selected || placeholder;
   return {
     from,
@@ -39,6 +53,13 @@ function wrapSelection(
     anchor: from + before.length,
     head: from + before.length + content.length,
   };
+}
+
+function stripBlockPrefix(line: string) {
+  return line
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/^>\s?/, "")
+    .replace(/^(?:[-+*]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "");
 }
 
 function selectedLines(source: string, from: number, to: number) {
@@ -50,6 +71,28 @@ function selectedLines(source: string, from: number, to: number) {
     from: lineFrom,
     to: lineTo,
     lines: source.slice(lineFrom, lineTo).split("\n"),
+  };
+}
+
+function insertBlock(
+  source: string,
+  from: number,
+  to: number,
+  block: string,
+  selectFrom: number,
+  selectTo: number,
+): MarkdownEdit {
+  const selected = source.slice(from, to);
+  const before = from > 0 && source[from - 1] !== "\n" ? "\n\n" : "";
+  const after = to < source.length && source[to] !== "\n" ? "\n\n" : "";
+  const insert = `${selected}${before}${block}${after}`;
+  const blockFrom = from + selected.length + before.length;
+  return {
+    from,
+    to,
+    insert,
+    anchor: blockFrom + selectFrom,
+    head: blockFrom + selectTo,
   };
 }
 
@@ -76,6 +119,7 @@ function toggleLinePrefix(
   to: number,
   prefix: string,
   pattern: RegExp,
+  normalize: (line: string) => string = (line) => line,
 ): MarkdownEdit {
   const selection = selectedLines(source, from, to);
   const populated = selection.lines.filter((line) => line.trim());
@@ -83,7 +127,9 @@ function toggleLinePrefix(
     populated.length > 0 && populated.every((line) => pattern.test(line));
   return replaceLines(source, from, to, (line) => {
     if (!line.trim()) return line;
-    return shouldRemove ? line.replace(pattern, "") : `${prefix}${line}`;
+    return shouldRemove
+      ? line.replace(pattern, "")
+      : `${prefix}${normalize(line)}`;
   });
 }
 
@@ -124,48 +170,71 @@ export function createMarkdownEdit(
     };
   }
   if (format === "image") {
-    const selected = source.slice(from, to);
-    const alt = selected || "图片描述";
-    const insert = `![${alt}](/media/图片地址)`;
-    const urlFrom = from + alt.length + 4;
-    return {
-      from,
-      to,
-      insert,
-      anchor: selected ? urlFrom : from + 2,
-      head: selected ? urlFrom + 11 : from + 2 + alt.length,
-    };
+    return createMarkdownImageEdit(
+      source,
+      { from, to },
+      "/media/图片地址",
+      source.slice(from, to) || "图片描述",
+    );
+  }
+  if (format === "horizontal-rule") {
+    return insertBlock(source, from, to, "---", 3, 3);
+  }
+  if (format === "table") {
+    const block = [
+      "| 列 1 | 列 2 | 列 3 |",
+      "| --- | --- | --- |",
+      "| 内容 | 内容 | 内容 |",
+    ].join("\n");
+    return insertBlock(source, from, to, block, 2, 5);
+  }
+  if (format === "paragraph") {
+    return replaceLines(source, from, to, (line) =>
+      line.trim() ? stripBlockPrefix(line) : line,
+    );
   }
   if (format.startsWith("heading-")) {
     const level = Number(format.slice(-1));
     const prefix = `${"#".repeat(level)} `;
     return replaceLines(source, from, to, (line) =>
-      line.trim() ? `${prefix}${line.replace(/^#{1,6}\s+/, "")}` : line,
+      line.trim() ? `${prefix}${stripBlockPrefix(line)}` : line,
     );
   }
   if (format === "quote") {
     return toggleLinePrefix(source, from, to, "> ", /^>\s?/);
   }
   if (format === "bullet-list") {
-    return replaceLines(source, from, to, (line) =>
-      line.trim()
-        ? `- ${line.replace(/^(?:[-+*]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")}`
-        : line,
+    return toggleLinePrefix(
+      source,
+      from,
+      to,
+      "- ",
+      /^[-+*]\s+(?!\[[ xX]\]\s+)/,
+      stripBlockPrefix,
     );
   }
   if (format === "ordered-list") {
+    const selection = selectedLines(source, from, to);
+    const populated = selection.lines.filter((line) => line.trim());
+    const shouldRemove =
+      populated.length > 0 &&
+      populated.every((line) => /^\d+\.\s+/.test(line));
     let item = 0;
     return replaceLines(source, from, to, (line) => {
       if (!line.trim()) return line;
+      if (shouldRemove) return line.replace(/^\d+\.\s+/, "");
       item += 1;
-      return `${item}. ${line.replace(/^(?:[-+*]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")}`;
+      return `${item}. ${stripBlockPrefix(line)}`;
     });
   }
   if (format === "task-list") {
-    return replaceLines(source, from, to, (line) =>
-      line.trim()
-        ? `- [ ] ${line.replace(/^(?:[-+*]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")}`
-        : line,
+    return toggleLinePrefix(
+      source,
+      from,
+      to,
+      "- [ ] ",
+      /^[-+*]\s+\[[ xX]\]\s+/,
+      stripBlockPrefix,
     );
   }
 
@@ -176,4 +245,55 @@ export function createMarkdownEdit(
     anchor: from,
     head: to,
   };
+}
+
+export function createMarkdownImageEdit(
+  source: string,
+  selection: { from: number; to: number },
+  url: string,
+  alt: string,
+): MarkdownEdit {
+  const from = Math.max(0, Math.min(selection.from, source.length));
+  const to = Math.max(from, Math.min(selection.to, source.length));
+  const safeAlt = alt.replace(/[\]\r\n]+/g, " ").trim() || "图片";
+  const safeUrl = url.replace(/\s/g, "%20").replace(/\)/g, "%29");
+  const insert = `![${safeAlt}](${safeUrl})`;
+  return {
+    from,
+    to,
+    insert,
+    anchor: from + insert.length,
+    head: from + insert.length,
+  };
+}
+
+export function getActiveMarkdownFormats(
+  source: string,
+  selection: { from: number; to: number },
+): MarkdownFormat[] {
+  const from = Math.max(0, Math.min(selection.from, source.length));
+  const to = Math.max(from, Math.min(selection.to, source.length));
+  const active = new Set<MarkdownFormat>();
+  const line = selectedLines(source, from, to).lines[0] ?? "";
+  const heading = line.match(/^(#{1,3})\s+/);
+
+  if (heading) active.add(`heading-${heading[1].length}` as MarkdownFormat);
+  else active.add("paragraph");
+  if (/^>\s?/.test(line)) active.add("quote");
+  if (/^[-+*]\s+(?!\[[ xX]\]\s+)/.test(line)) active.add("bullet-list");
+  if (/^\d+\.\s+/.test(line)) active.add("ordered-list");
+  if (/^[-+*]\s+\[[ xX]\]\s+/.test(line)) active.add("task-list");
+
+  const selected = source.slice(from, to);
+  if (selected) {
+    const wrapped = (before: string, after = before) =>
+      source.slice(Math.max(0, from - before.length), from) === before &&
+      source.slice(to, to + after.length) === after;
+    if (wrapped("**")) active.add("bold");
+    if (wrapped("*") && !wrapped("**")) active.add("italic");
+    if (wrapped("~~")) active.add("strike");
+    if (wrapped("`")) active.add("inline-code");
+  }
+
+  return [...active];
 }
