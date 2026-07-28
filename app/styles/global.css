@@ -49,11 +49,15 @@
 
 html {
   min-width: 320px;
+  max-width: 100%;
+  overflow-x: clip;
   scroll-behavior: smooth;
   background: var(--paper);
 }
 
 body {
+  max-width: 100%;
+  overflow-x: clip;
   min-height: 100vh;
   margin: 0;
   color: var(--ink);
@@ -739,6 +743,7 @@ img {
 }
 
 .project-card__symbol {
+  position: relative;
   display: grid;
   width: 68px;
   height: 68px;
@@ -750,6 +755,70 @@ img {
   border-radius: 45% 55% 60% 40%;
   background: var(--paper-raised);
   transform: rotate(-6deg);
+}
+
+.project-card__symbol > span,
+.project-card__symbol > img {
+  position: relative;
+  z-index: 1;
+}
+
+.project-card__symbol > img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.project-card__symbol--blob {
+  border-radius: 45% 55% 60% 40%;
+  transform: rotate(-6deg);
+}
+
+.project-card__symbol--circle {
+  border-radius: 50%;
+  transform: rotate(3deg);
+}
+
+.project-card__symbol--rounded {
+  border-radius: 14px 24px 17px 21px;
+  transform: rotate(-2deg);
+}
+
+.project-card__symbol--diamond {
+  border-radius: 16px 7px 17px 8px;
+  transform: rotate(45deg) scale(0.82);
+}
+
+.project-card__symbol--diamond > span {
+  transform: rotate(-45deg) scale(1.18);
+}
+
+.project-card__symbol--diamond > img {
+  transform: rotate(-45deg) scale(1.45);
+}
+
+.project-card__symbol--hexagon {
+  border-radius: 28% 28% 32% 32%;
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
+  transform: rotate(-3deg);
+}
+
+.project-card__symbol--ticket {
+  border-radius: 8px 22px 8px 22px;
+  clip-path: polygon(0 0, 100% 0, 100% 34%, 88% 50%, 100% 66%, 100% 100%, 0 100%, 0 66%, 12% 50%, 0 34%);
+  transform: rotate(2deg);
+}
+
+.project-card__symbol--burst {
+  border-radius: 18%;
+  clip-path: polygon(50% 0, 62% 16%, 82% 7%, 84% 29%, 100% 40%, 84% 53%, 94% 74%, 70% 77%, 61% 100%, 45% 82%, 24% 94%, 22% 70%, 0 61%, 17% 45%, 7% 23%, 31% 22%);
+  transform: rotate(-4deg);
+}
+
+.project-card__symbol--flower {
+  border-radius: 52% 27% 52% 27% / 27% 52% 27% 52%;
+  transform: rotate(8deg);
 }
 
 .project-card h3 {
@@ -792,6 +861,151 @@ img {
   font-family: var(--font-system);
   font-size: 0.68rem;
   font-weight: 800;
+}
+
+.friend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.35rem;
+}
+
+.friend-card {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 176px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  color: var(--ink);
+  text-decoration: none;
+  border: 2.5px solid var(--ink);
+  border-radius: 15px 24px 17px 21px;
+  background: var(--pink-soft);
+  box-shadow: var(--shadow-small);
+  transform: rotate(calc((var(--friend-index) - 1) * 0.35deg));
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.friend-card:hover {
+  z-index: 2;
+  box-shadow: 1px 2px 0 var(--ink);
+  transform: translate(2px, 2px) rotate(0);
+}
+
+.friend-card--yellow { background: var(--yellow-soft); }
+.friend-card--blue { background: var(--blue-soft); }
+.friend-card--mint { background: var(--mint-soft); }
+.friend-card--lavender { background: var(--lavender-soft); }
+
+.friend-card__pin {
+  position: absolute;
+  top: 8px;
+  right: 17px;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 1px 2px 0 var(--ink);
+}
+
+.friend-card__avatar {
+  display: grid;
+  width: 88px;
+  height: 88px;
+  place-items: center;
+  overflow: hidden;
+  border: 2.5px solid var(--ink);
+  border-radius: 46% 54% 48% 52%;
+  background: var(--paper-raised);
+  font-family: var(--font-display);
+  font-size: 2.7rem;
+  transform: rotate(-3deg);
+}
+
+.friend-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.friend-card__copy {
+  display: grid;
+  min-width: 0;
+}
+
+.friend-card__copy strong {
+  margin: 0.2rem 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.friend-card__copy > span:not(.micro-label) {
+  overflow-wrap: anywhere;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.friend-card__copy small {
+  margin-top: 0.65rem;
+  overflow-wrap: anywhere;
+  font-family: var(--font-system);
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.friend-empty {
+  display: grid;
+  min-height: 260px;
+  grid-template-columns: auto minmax(0, 1fr);
+  place-items: center start;
+  gap: 1.5rem;
+  padding: clamp(1.4rem, 5vw, 3rem);
+  border: 3px dashed var(--ink);
+  border-radius: 18px 27px 17px 23px;
+  background: var(--blue-soft);
+}
+
+.friend-empty > span {
+  font-family: var(--font-display);
+  font-size: 5rem;
+}
+
+.friend-empty h2,
+.friend-invite h2 {
+  margin: 0.35rem 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.friend-empty p,
+.friend-invite p {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.friend-invite {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.4rem;
+  margin-top: 2rem;
+  padding: 1.3rem;
+  border: 2.5px solid var(--ink);
+  border-radius: 14px 21px 16px 25px;
+  background: var(--yellow-soft);
+  box-shadow: var(--shadow-small);
+}
+
+.friend-invite > .scrap-label {
+  transform: rotate(-3deg);
 }
 
 .home-split {
@@ -1427,6 +1641,8 @@ img {
 
 .admin-workspace {
   min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .admin-heading {
@@ -1459,7 +1675,7 @@ img {
 
 .admin-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 1.3rem;
 }
@@ -1483,6 +1699,10 @@ img {
 
 .admin-stat-grid article:nth-child(4) {
   background: var(--mint-soft);
+}
+
+.admin-stat-grid article:nth-child(5) {
+  background: var(--lavender-soft);
 }
 
 .admin-stat-grid span,
@@ -1560,7 +1780,12 @@ img {
 }
 
 .admin-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  contain: inline-size paint;
   border: 2px solid var(--ink);
   background: var(--paper-raised);
 }
@@ -1694,6 +1919,7 @@ img {
 
 .editor-pane,
 .preview-pane {
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -1737,6 +1963,7 @@ img {
 }
 
 .editor-pane .cm-editor {
+  max-width: 100%;
   color: var(--ink);
   background: var(--paper-raised);
   font-size: 14px;
@@ -1817,6 +2044,13 @@ img {
   padding: 0.45rem 0;
   border-top: 1px dashed var(--line);
   font-size: 0.75rem;
+}
+
+.revisions-panel strong,
+.revisions-panel span,
+.revisions-panel time {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .create-panel > form,
@@ -2204,7 +2438,7 @@ img {
 
 .quick-action-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -2239,6 +2473,57 @@ img {
 .quick-action-grid small {
   color: var(--ink-muted);
   font-size: 0.66rem;
+}
+
+.project-icon-editor {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 2px dashed var(--ink);
+  border-radius: 12px 18px 13px 20px;
+  background: color-mix(in srgb, var(--blue-soft) 44%, var(--paper));
+}
+
+.project-icon-editor legend {
+  padding: 0 0.45rem;
+  font-weight: 800;
+}
+
+.project-icon-editor legend small {
+  margin-left: 0.35rem;
+  color: var(--ink-muted);
+  font-family: var(--font-system);
+  font-size: 0.52rem;
+}
+
+.project-icon-editor__preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.project-card__symbol--preview {
+  width: 74px;
+  height: 74px;
+  flex: 0 0 auto;
+  margin: 0;
+  background: var(--paper-raised);
+}
+
+.project-icon-editor__preview > span {
+  display: grid;
+}
+
+.project-icon-editor__preview small {
+  color: var(--ink-muted);
+  font-size: 0.68rem;
+}
+
+.project-icon-editor__controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
 }
 
 .settings-jump {
@@ -2695,7 +2980,7 @@ img {
   }
 
   .admin-stat-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .admin-dashboard-grid {
@@ -2718,6 +3003,15 @@ img {
 
   .media-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .friend-invite {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .friend-invite > .scrap-label {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 }
 
@@ -2804,6 +3098,7 @@ img {
 
   .project-grid--featured,
   .project-grid--archive,
+  .friend-grid,
   .blog-grid,
   .about-layout {
     grid-template-columns: 1fr;
@@ -2856,7 +3151,7 @@ img {
 
   .admin-sidebar nav section {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.35rem;
   }
 
@@ -2905,6 +3200,10 @@ img {
     min-height: 112px;
   }
 
+  .admin-stat-grid article:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
   .admin-dashboard-grid,
   .probe-detail-grid,
   .quick-action-grid,
@@ -2916,6 +3215,10 @@ img {
 
   .runtime-grid__wide {
     grid-column: auto;
+  }
+
+  .project-icon-editor__controls {
+    grid-template-columns: 1fr;
   }
 
   .probe-overview {
@@ -2967,6 +3270,33 @@ img {
 
   .admin-table {
     min-width: 720px;
+  }
+
+  .revisions-panel ol {
+    padding-left: 1.25rem;
+  }
+
+  .revisions-panel li {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .friend-empty {
+    min-height: 220px;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .friend-empty > span {
+    font-size: 3.5rem;
+  }
+
+  .friend-invite {
+    grid-template-columns: 1fr;
+  }
+
+  .friend-invite .button {
+    width: 100%;
   }
 
   .sticky-savebar {

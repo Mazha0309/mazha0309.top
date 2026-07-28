@@ -12,6 +12,7 @@ import { getDb, getPool, hasDatabase } from "./db.server";
 import {
   analyticsDaily,
   contentLinks,
+  friendLinks,
   media,
   pages,
   postRevisions,
@@ -22,6 +23,7 @@ import {
 } from "./schema.server";
 import {
   fallbackLinks,
+  fallbackFriendLinks,
   fallbackPages,
   fallbackPosts,
   fallbackProfile,
@@ -31,6 +33,7 @@ import { normalizeSiteCustomization } from "./site-customization";
 import { estimateReadingMinutes, mdxToText, slugify, splitTags } from "./content-utils";
 import type {
   ContentLink,
+  FriendLinkRecord,
   MediaRecord,
   PageRecord,
   PostRecord,
@@ -190,6 +193,18 @@ export async function listProjects() {
     .select()
     .from(projects)
     .orderBy(asc(projects.position), desc(projects.createdAt))) as ProjectRecord[];
+}
+
+export async function listFriendLinks(options: { includeDisabled?: boolean } = {}) {
+  if (!hasDatabase()) return fallbackFriendLinks;
+  const db = getDb();
+  const query = db.select().from(friendLinks);
+  const rows = options.includeDisabled
+    ? await query.orderBy(asc(friendLinks.position), asc(friendLinks.name))
+    : await query
+        .where(eq(friendLinks.enabled, true))
+        .orderBy(asc(friendLinks.position), asc(friendLinks.name));
+  return rows as FriendLinkRecord[];
 }
 
 export async function getPage(slug: string) {
@@ -444,6 +459,9 @@ export async function saveProject(input: {
   repoUrl: string | null;
   liveUrl: string | null;
   accent: string;
+  iconMode: ProjectRecord["iconMode"];
+  iconValue: string;
+  iconShape: ProjectRecord["iconShape"];
   statusLabel: string;
   featured: boolean;
   position: number;
@@ -469,6 +487,35 @@ export async function saveProject(input: {
 export async function deleteProject(id: string) {
   if (!hasDatabase()) throw new Error("项目写入需要数据库。");
   await getDb().delete(projects).where(eq(projects.id, id));
+}
+
+export async function saveFriendLink(input: {
+  id?: string;
+  name: string;
+  url: string;
+  avatarUrl: string | null;
+  description: string;
+  accent: string;
+  position: number;
+  enabled: boolean;
+}) {
+  if (!hasDatabase()) throw new Error("友链写入需要数据库。");
+  const values = { ...input, updatedAt: new Date() };
+  if (input.id) {
+    const [saved] = await getDb()
+      .update(friendLinks)
+      .set(values)
+      .where(eq(friendLinks.id, input.id))
+      .returning();
+    return saved;
+  }
+  const [saved] = await getDb().insert(friendLinks).values(values).returning();
+  return saved;
+}
+
+export async function deleteFriendLink(id: string) {
+  if (!hasDatabase()) throw new Error("友链写入需要数据库。");
+  await getDb().delete(friendLinks).where(eq(friendLinks.id, id));
 }
 
 export async function listPages() {

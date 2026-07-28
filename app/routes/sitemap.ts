@@ -4,7 +4,7 @@ import { getPublishedSlugs } from "../lib/content.server";
 export async function loader({ request }: LoaderFunctionArgs) {
   const origin = process.env.APP_ORIGIN ?? new URL(request.url).origin;
   const posts = await getPublishedSlugs();
-  const staticPaths = ["/", "/blog", "/projects", "/about"];
+  const staticPaths = ["/", "/blog", "/projects", "/friends", "/about"];
   const urls = [
     ...staticPaths.map(
       (path) => `<url><loc>${origin}${path}</loc></url>`,

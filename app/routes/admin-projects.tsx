@@ -9,6 +9,13 @@ import {
 import { requireAdmin } from "../lib/auth.server";
 import { formString, requireSameOrigin } from "../lib/security.server";
 import { validateMdx } from "../lib/mdx.server";
+import {
+  isAllowedProjectIconUrl,
+  normalizeProjectIconMode,
+  normalizeProjectIconShape,
+  normalizeProjectIconValue,
+} from "../lib/project-icon";
+import { ProjectIconFields } from "../components/project-icon-fields";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await requireAdmin(request);
@@ -28,6 +35,13 @@ export async function action({ request }: ActionFunctionArgs) {
     }
     const bodyMdx = formString(form, "bodyMdx");
     validateMdx(bodyMdx);
+    const iconMode = normalizeProjectIconMode(
+      formString(form, "iconMode", { max: 20 }),
+    );
+    const rawIconValue = formString(form, "iconValue", { max: 600 });
+    if (iconMode === "image" && !isAllowedProjectIconUrl(rawIconValue)) {
+      throw new Error("自定义图标图片需要站内路径或 HTTP(S) 地址。");
+    }
     const project = await saveProject({
       id: intent === "new" ? undefined : id,
       title: formString(form, "title", { required: true, max: 160 }),
@@ -38,6 +52,11 @@ export async function action({ request }: ActionFunctionArgs) {
       repoUrl: formString(form, "repoUrl", { max: 600 }) || null,
       liveUrl: formString(form, "liveUrl", { max: 600 }) || null,
       accent: formString(form, "accent", { max: 20 }) || "pink",
+      iconMode,
+      iconValue: normalizeProjectIconValue(iconMode, rawIconValue),
+      iconShape: normalizeProjectIconShape(
+        formString(form, "iconShape", { max: 20 }),
+      ),
       statusLabel:
         formString(form, "statusLabel", { max: 40 }) || "MAKING",
       featured: form.get("featured") === "on",
@@ -107,6 +126,7 @@ function ProjectFields({
           <span>排序</span>
           <input name="position" type="number" defaultValue={project?.position ?? 0} />
         </label>
+        <ProjectIconFields project={project} />
         <label className="check-field">
           <input name="featured" type="checkbox" defaultChecked={project?.featured} />
           <span>首页精选</span>

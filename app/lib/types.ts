@@ -1,6 +1,17 @@
 export type PublishStatus = "draft" | "scheduled" | "published";
 
 export type SiteAccent = "pink" | "blue" | "mint" | "purple" | "orange";
+export type ProjectIconMode = "random" | "preset" | "custom" | "image";
+export type ProjectIconShape =
+  | "random"
+  | "blob"
+  | "circle"
+  | "rounded"
+  | "diamond"
+  | "hexagon"
+  | "ticket"
+  | "burst"
+  | "flower";
 
 export interface SiteCustomization {
   siteTitle: string;
@@ -88,9 +99,25 @@ export interface ProjectRecord {
   liveUrl?: string | null;
   coverUrl?: string | null;
   accent: string;
+  iconMode: ProjectIconMode;
+  iconValue: string;
+  iconShape: ProjectIconShape;
   featured: boolean;
   position: number;
   statusLabel: string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export interface FriendLinkRecord {
+  id: string;
+  name: string;
+  url: string;
+  avatarUrl?: string | null;
+  description: string;
+  accent: string;
+  position: number;
+  enabled: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

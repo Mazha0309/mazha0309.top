@@ -15,6 +15,13 @@
       "when": 1785261519829,
       "tag": "0001_redundant_prism",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785262659982,
+      "tag": "0002_good_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import type {
   ContentLink,
+  FriendLinkRecord,
   PageRecord,
   PostRecord,
   ProjectRecord,
@@ -57,6 +58,14 @@ export const fallbackLinks: ContentLink[] = [
     enabled: true,
   },
   {
+    id: "nav-friends",
+    kind: "nav",
+    label: "FRIENDS",
+    url: "/friends",
+    position: 4,
+    enabled: true,
+  },
+  {
     id: "social-github",
     kind: "social",
     label: "GitHub",
@@ -81,6 +90,9 @@ export const fallbackProjects: ProjectRecord[] = [
     liveUrl: null,
     coverUrl: null,
     accent: "yellow",
+    iconMode: "preset",
+    iconValue: "radio",
+    iconShape: "circle",
     featured: true,
     position: 0,
     statusLabel: "ON AIR",
@@ -97,6 +109,9 @@ export const fallbackProjects: ProjectRecord[] = [
     liveUrl: null,
     coverUrl: null,
     accent: "pink",
+    iconMode: "preset",
+    iconValue: "orbit",
+    iconShape: "burst",
     featured: true,
     position: 1,
     statusLabel: "EXPERIMENT",
@@ -112,11 +127,16 @@ export const fallbackProjects: ProjectRecord[] = [
     liveUrl: null,
     coverUrl: null,
     accent: "blue",
+    iconMode: "preset",
+    iconValue: "link",
+    iconShape: "diamond",
     featured: true,
     position: 2,
     statusLabel: "DEPLOYABLE",
   },
 ];
+
+export const fallbackFriendLinks: FriendLinkRecord[] = [];
 
 export const fallbackPages: PageRecord[] = [
   {

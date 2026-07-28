@@ -28,6 +28,7 @@ const adminGroups = [
       ["/admin", "OVERVIEW", "总览", "⌂"],
       ["/admin/posts", "POSTS", "文章", "✎"],
       ["/admin/projects", "PROJECTS", "项目", "◇"],
+      ["/admin/friends", "FRIENDS", "友链", "♡"],
       ["/admin/pages", "PAGES", "页面", "▤"],
       ["/admin/media", "MEDIA", "媒体", "▧"],
     ],

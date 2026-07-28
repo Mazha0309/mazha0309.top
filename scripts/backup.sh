@@ -28,6 +28,7 @@ echo "Exporting CMS tables (auth and analytics are intentionally excluded)."
   --table public.post_slugs \
   --table public.post_revisions \
   --table public.projects \
+  --table public.friend_links \
   --table public.pages \
   --table public.media \
   > "$work_dir/content.dump"
@@ -40,8 +41,8 @@ echo "Exporting persistent media."
   cd "$work_dir"
   sha256sum content.dump media.tar.gz > SHA256SUMS
   cat > BACKUP-NOTES.txt <<'EOF'
-This archive contains CMS content, revisions, project/page settings, media metadata,
-and media files. Better Auth tables, sessions, OAuth tokens, secrets, and raw
+This archive contains CMS content, revisions, projects, friend links, page settings,
+media metadata, and media files. Better Auth tables, sessions, OAuth tokens, secrets, and raw
 analytics are deliberately excluded.
 
 This backup is not encrypted. Store it only in the dedicated private repository.
