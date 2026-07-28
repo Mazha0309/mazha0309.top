@@ -799,21 +799,53 @@ img {
 }
 
 .project-card__symbol--hexagon {
+  --icon-clip: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
   border-radius: 28% 28% 32% 32%;
-  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
+  clip-path: var(--icon-clip);
   transform: rotate(-3deg);
 }
 
 .project-card__symbol--ticket {
+  --icon-clip: polygon(0 0, 100% 0, 100% 34%, 88% 50%, 100% 66%, 100% 100%, 0 100%, 0 66%, 12% 50%, 0 34%);
   border-radius: 8px 22px 8px 22px;
-  clip-path: polygon(0 0, 100% 0, 100% 34%, 88% 50%, 100% 66%, 100% 100%, 0 100%, 0 66%, 12% 50%, 0 34%);
+  clip-path: var(--icon-clip);
   transform: rotate(2deg);
 }
 
 .project-card__symbol--burst {
+  --icon-clip: polygon(50% 0, 62% 16%, 82% 7%, 84% 29%, 100% 40%, 84% 53%, 94% 74%, 70% 77%, 61% 100%, 45% 82%, 24% 94%, 22% 70%, 0 61%, 17% 45%, 7% 23%, 31% 22%);
   border-radius: 18%;
-  clip-path: polygon(50% 0, 62% 16%, 82% 7%, 84% 29%, 100% 40%, 84% 53%, 94% 74%, 70% 77%, 61% 100%, 45% 82%, 24% 94%, 22% 70%, 0 61%, 17% 45%, 7% 23%, 31% 22%);
+  clip-path: var(--icon-clip);
   transform: rotate(-4deg);
+}
+
+.project-card__symbol.project-card__symbol--hexagon,
+.project-card__symbol.project-card__symbol--ticket,
+.project-card__symbol.project-card__symbol--burst {
+  border: 0;
+  background: var(--ink);
+}
+
+.project-card__symbol--hexagon::before,
+.project-card__symbol--ticket::before,
+.project-card__symbol--burst::before {
+  position: absolute;
+  z-index: 0;
+  inset: 3px;
+  clip-path: var(--icon-clip);
+  background: var(--paper-raised);
+  content: "";
+}
+
+.project-card__symbol--hexagon > img,
+.project-card__symbol--ticket > img,
+.project-card__symbol--burst > img {
+  position: absolute;
+  inset: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  clip-path: var(--icon-clip);
+  border-radius: 0;
 }
 
 .project-card__symbol--flower {
