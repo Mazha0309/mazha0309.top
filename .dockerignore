@@ -1,0 +1,11 @@
+node_modules
+build
+.react-router
+.git
+.github
+.env
+.env.*
+data
+backups
+playwright-report
+test-results

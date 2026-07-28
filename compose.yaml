@@ -1,0 +1,68 @@
+name: mazha-home
+
+services:
+  postgres:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mazha_home}
+      POSTGRES_USER: ${POSTGRES_USER:-mazha}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 4s
+      retries: 12
+
+  app:
+    image: ${APP_IMAGE:-mazha0309-top:local}
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      TZ: ${TZ:-Asia/Shanghai}
+      MEDIA_ROOT: /data/media
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mazha}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mazha_home}
+    volumes:
+      - media_data:/data/media
+    networks:
+      internal:
+      caddy:
+        aliases:
+          - mazha-home-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 4s
+      start_period: 25s
+      retries: 4
+
+volumes:
+  postgres_data:
+  media_data:
+
+networks:
+  internal:
+    internal: true
+  caddy:
+    external: true
+    name: ${CADDY_NETWORK:-caddy}
