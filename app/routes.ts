@@ -1,0 +1,40 @@
+import {
+  index,
+  prefix,
+  route,
+  type RouteConfig,
+} from "@react-router/dev/routes";
+
+export default [
+  index("routes/home.tsx"),
+  route("blog", "routes/blog.tsx"),
+  route("blog/:slug", "routes/blog-detail.tsx"),
+  route("projects", "routes/projects.tsx"),
+  route("about", "routes/about.tsx"),
+  route("search", "routes/search.tsx"),
+  route("rss.xml", "routes/rss.ts"),
+  route("sitemap.xml", "routes/sitemap.ts"),
+  route("robots.txt", "routes/robots.ts"),
+  route("healthz", "routes/health.ts"),
+  route("media/:id/:filename", "routes/media-file.ts"),
+  route("api/auth/*", "routes/api-auth.ts"),
+  route("api/search", "routes/api-search.ts"),
+  route("api/analytics/view", "routes/api-view.ts"),
+  route("admin/login", "routes/admin-login.tsx"),
+  route("admin", "routes/admin-layout.tsx", [
+    index("routes/admin-dashboard.tsx"),
+    route("posts", "routes/admin-posts.tsx"),
+    route("posts/:id", "routes/admin-post-editor.tsx"),
+    route("posts/:id/preview", "routes/admin-post-preview.tsx"),
+    route("projects", "routes/admin-projects.tsx"),
+    route("pages", "routes/admin-pages.tsx"),
+    route("now", "routes/admin-now.tsx"),
+    route("media", "routes/admin-media.tsx"),
+    route("settings", "routes/admin-settings.tsx"),
+    route("analytics", "routes/admin-analytics.tsx"),
+  ]),
+  ...prefix("api/admin", [
+    route("posts/:id/autosave", "routes/api-admin-autosave.ts"),
+    route("preview", "routes/api-admin-preview.ts"),
+  ]),
+] satisfies RouteConfig;

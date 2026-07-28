@@ -1,0 +1,76 @@
+name: Deploy VPS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        run: echo "image=${IMAGE_NAME}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: image
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Copy deployment files
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+        run: |
+          ssh "$USER@$HOST" "mkdir -p '$DEPLOY_PATH/scripts'"
+          scp compose.yaml "$USER@$HOST:$DEPLOY_PATH/compose.yaml"
+          scp scripts/deploy-vps.sh "$USER@$HOST:$DEPLOY_PATH/scripts/deploy-vps.sh"
+      - name: Migrate, restart, and verify
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+          IMAGE: ${{ needs.image.outputs.image }}
+        run: |
+          ssh "$USER@$HOST" "cd '$DEPLOY_PATH' && chmod +x scripts/deploy-vps.sh && scripts/deploy-vps.sh '$IMAGE'"
