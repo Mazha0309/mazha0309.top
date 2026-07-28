@@ -10,7 +10,7 @@ export const fallbackProfile: SiteProfile = {
   id: "main",
   displayName: "Mazha0309",
   handle: "@Mazha0309",
-  heroEyebrow: "PERSONAL TERMINAL / ONLINE",
+  heroEyebrow: "HELLO FROM MAZHA / 欢迎来玩",
   heroTitle: "喵喵喵，这里是 Mazha0309",
   heroIntro:
     "一个把代码、无线电、怪点子和生活碎片钉在同一块软木板上的个人主页。",
@@ -65,47 +65,7 @@ export const fallbackLinks: ContentLink[] = [
   },
 ];
 
-export const fallbackPosts: PostRecord[] = [
-  {
-    id: "8ef65724-7d2a-4e65-a58f-3a5a5a7f4b35",
-    slug: "hello-from-the-desk",
-    title: "总之，先把这里搭起来",
-    summary: "这是主页施工现场的第一张便签：为什么要再造一个自己的小角落。",
-    contentMdx: `## 欢迎来到这张桌子
-
-互联网越来越像一条永远刷不完的走廊，所以我决定给自己留一张桌子。
-
-这里会放代码、项目记录、踩坑现场，也会混进一些很难分类的生活碎片。它不保证整洁，但会一直生长。
-
-<Note title="当前状态">主页刚刚通电。还有很多抽屉是空的，请把它当成施工现场。</Note>
-
-## 接下来会有什么
-
-- 项目背后的决策和翻车记录
-- 无线电与工具折腾
-- 偶尔出现、但不承诺有用的怪想法
-
-\`\`\`ts
-const homepage = {
-  status: "making",
-  noise: "meow",
-};
-\`\`\`
-
-如果你在角落里发现了歪掉的胶带——那不是 bug，是证据。`,
-    contentText:
-      "欢迎来到这张桌子。互联网越来越像一条永远刷不完的走廊，所以我决定给自己留一张桌子。这里会放代码、项目记录、踩坑现场，也会混进一些很难分类的生活碎片。",
-    tags: ["建站", "随笔"],
-    coverUrl: null,
-    status: "published",
-    featured: true,
-    publishedAt: "2026-07-28T08:00:00.000Z",
-    scheduledAt: null,
-    createdAt: "2026-07-28T08:00:00.000Z",
-    updatedAt: "2026-07-28T08:00:00.000Z",
-    readingMinutes: 2,
-  },
-];
+export const fallbackPosts: PostRecord[] = [];
 
 export const fallbackProjects: ProjectRecord[] = [
   {
@@ -161,14 +121,14 @@ export const fallbackPages: PageRecord[] = [
     id: "4ba21619-0f62-4f74-8124-e589f20ae956",
     slug: "about",
     title: "关于这只 Mazha",
-    eyebrow: "SUBJECT FILE / 0309",
+    eyebrow: "ABOUT ME / 一点自我介绍",
     contentMdx: `## 嗨，我是 Mazha0309
 
 平时写代码、折腾自托管服务，也对业余无线电和各种不太必要但很好玩的工具感兴趣。
 
 这个网站不是一份端正的简历。它更像一张长期不收拾的工作台：项目放左边，笔记压在下面，偶尔还有猫踩过。
 
-<Stamp>100% 可疑但真诚</Stamp>
+<Stamp>认真制作，真心欢迎</Stamp>
 
 ## 可以在这里找到什么
 
@@ -180,7 +140,7 @@ export const fallbackPages: PageRecord[] = [
     id: "9a27e990-d92d-4368-a76f-e55ee2381c67",
     slug: "now",
     title: "NOW",
-    eyebrow: "LIVE STATUS / RECENTLY",
+    eyebrow: "THESE DAYS / 最近",
     contentMdx: `最近正在把这个主页从一张空白纸，慢慢贴成自己的样子。
 
 - 整理旧项目

@@ -5,7 +5,7 @@ import { PageHeading } from "../components/page-heading";
 import { PageViewBeacon } from "../components/post-engagement";
 
 export const meta: MetaFunction = () => [
-  { title: "人物档案 — Mazha0309" },
+  { title: "关于我 — Mazha0309" },
   { name: "description", content: "关于 Mazha0309 和这张长期施工的数字工作台。" },
 ];
 
@@ -46,11 +46,11 @@ export default function About({ loaderData }: { loaderData: Awaited<ReturnType<t
             <span>{profile.handle}</span>
             <dl>
               <div>
-                <dt>LOCATION</dt>
+                <dt>住在哪里</dt>
                 <dd>{profile.location}</dd>
               </div>
               <div>
-                <dt>STATUS</dt>
+                <dt>最近状态</dt>
                 <dd>{profile.statusText}</dd>
               </div>
             </dl>

@@ -13,7 +13,6 @@ import stylesheet from "./styles/global.css?url";
 import articleStylesheet from "./styles/article.css?url";
 import { getSiteShell } from "./lib/content.server";
 import { SearchPalette } from "./components/search-palette";
-import { ThemeSwitch } from "./components/theme-switch";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
@@ -39,25 +38,13 @@ export async function loader(_args: LoaderFunctionArgs) {
   return getSiteShell();
 }
 
-const themeBootScript = `
-(() => {
-  try {
-    const saved = localStorage.getItem("mazha-theme");
-    const theme = saved === "midnight" || saved === "paper" ? saved : "paper";
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme === "midnight" ? "dark" : "light";
-  } catch {}
-})();
-`;
-
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" data-theme="paper" suppressHydrationWarning>
+    <html lang="zh-CN">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#f5efe5" />
-        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <Meta />
         <Links />
       </head>
@@ -78,7 +65,7 @@ function Brand() {
       </span>
       <span>
         <strong>MAZHA0309</strong>
-        <small>PERSONAL SYSTEM™</small>
+        <small>HOMEPAGE & BLOG</small>
       </span>
     </NavLink>
   );
@@ -110,7 +97,6 @@ export default function App() {
         </nav>
         <div className="header-tools">
           <SearchPalette />
-          <ThemeSwitch />
         </div>
       </header>
 
@@ -120,7 +106,7 @@ export default function App() {
 
       <footer className="site-footer">
         <div>
-          <span className="micro-label">END OF TRANSMISSION / {new Date().getFullYear()}</span>
+          <span className="micro-label">SEE YOU AROUND / {new Date().getFullYear()}</span>
           <p>
             © {profile.displayName} · 这张纸由 React、PostgreSQL 和一点不必要的执念驱动。
           </p>
@@ -158,7 +144,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
 
   return (
     <div className="error-page">
-      <span className="security-pill">SYSTEM NOTE / {status}</span>
+      <span className="scrap-label">LOST PAPER / {status}</span>
       <h1>{title}</h1>
       <p>{detail}</p>
       <a className="button button--primary" href="/">

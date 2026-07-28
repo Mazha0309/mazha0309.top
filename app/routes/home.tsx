@@ -31,8 +31,8 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
       <PageViewBeacon path="/" />
       <section className="home-hero content-width">
         <div className="hero-copy">
-          <span className="security-pill">{profile.heroEyebrow}</span>
-          <p className="hero-kicker">HELLO, STRANGER / 欢迎误入</p>
+          <span className="scrap-label">{profile.heroEyebrow}</span>
+          <p className="hero-kicker">HELLO, FRIEND / 欢迎来玩</p>
           <h1>{profile.heroTitle}</h1>
           <p className="hero-intro">{profile.heroIntro}</p>
           <div className="hero-actions">
@@ -40,7 +40,7 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
               翻阅博客 <span aria-hidden="true">↗</span>
             </Link>
             <Link className="button button--secondary" to="/projects">
-              检查项目 <span aria-hidden="true">⌁</span>
+              看看项目 <span aria-hidden="true">⌁</span>
             </Link>
           </div>
           <p className="hero-footnote">
@@ -48,13 +48,13 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
           </p>
         </div>
 
-        <div className="identity-board" aria-label="Mazha0309 身份卡">
+        <div className="identity-board" aria-label="Mazha0309 的个人名片">
           <span className="tape tape--top" aria-hidden="true" />
           <div className="avatar-frame">
             <img src={profile.avatarUrl} alt={`${profile.displayName} 的头像`} />
           </div>
           <div className="identity-board__copy">
-            <span className="micro-label">SUBJECT / VERIFIED-ish</span>
+            <span className="micro-label">NICE TO MEET YOU / 初次见面</span>
             <strong>{profile.displayName}</strong>
             <span>{profile.handle}</span>
           </div>
@@ -63,9 +63,9 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
             {profile.statusText}
           </div>
           <span className="identity-stamp" aria-hidden="true">
-            100%
+            HELLO
             <br />
-            可疑
+            呀
           </span>
         </div>
       </section>
@@ -80,7 +80,7 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
       <section className="home-section content-width">
         <div className="section-title-row">
           <div>
-            <span className="micro-label">SELECTED EXPERIMENTS / 近期施工</span>
+            <span className="micro-label">THINGS I MADE / 近期施工</span>
             <h2>拿得出手的几个坑</h2>
           </div>
           <Link className="arrow-link" to="/projects">
@@ -118,14 +118,14 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
 
         <aside className="now-card">
           <span className="tape tape--corner" aria-hidden="true" />
-          <span className="micro-label">NOW.LOG / LIVE-ish</span>
+          <span className="micro-label">THESE DAYS / 最近</span>
           <h2>现在在干嘛</h2>
           <div
             className="mini-prose"
             dangerouslySetInnerHTML={{ __html: nowHtml }}
           />
           <Link to="/about" className="arrow-link">
-            查看人物档案 ↗
+            多认识我一点 ↗
           </Link>
         </aside>
       </section>

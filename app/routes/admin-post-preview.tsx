@@ -24,7 +24,7 @@ export default function AdminPostPreview({
   return (
     <article className="article-shell preview-document">
       <header className="article-header">
-        <span className="security-pill">DRAFT PREVIEW / NOT PUBLIC</span>
+        <span className="scrap-label">DRAFT PREVIEW / 还没贴出去</span>
         <h1>{loaderData.post.title}</h1>
         <p className="article-deck">{loaderData.post.summary}</p>
       </header>

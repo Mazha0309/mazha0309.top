@@ -59,7 +59,7 @@ export function SearchPalette() {
       >
         <div className="search-card">
           <div className="search-card__head">
-            <span className="security-pill">GLOBAL SCANNER / READY</span>
+            <span className="scrap-label">QUICK FIND / 随手翻翻</span>
             <button type="button" onClick={close} aria-label="关闭搜索">
               ×
             </button>

@@ -39,17 +39,6 @@ export function PostComments({
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
-  useEffect(() => {
-    const readTheme = () =>
-      setTheme(
-        document.documentElement.dataset.theme === "midnight" ? "dark" : "light",
-      );
-    readTheme();
-    window.addEventListener("mazha:theme", readTheme);
-    return () => window.removeEventListener("mazha:theme", readTheme);
-  }, []);
 
   useEffect(() => {
     if (!rootRef.current) return;
@@ -92,7 +81,7 @@ export function PostComments({
           reactionsEnabled="1"
           emitMetadata="0"
           inputPosition="top"
-          theme={theme}
+          theme="light"
           lang="zh-CN"
           loading="lazy"
         />

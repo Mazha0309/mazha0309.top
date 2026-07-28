@@ -22,7 +22,7 @@ export default function SearchPage({
   return (
     <div className="page-shell content-width search-page">
       <PageHeading
-        eyebrow="GLOBAL SCANNER / QUERY"
+        eyebrow="QUICK FIND / 翻找一下"
         title="翻翻这张桌子"
         lead="标题和标签会被优先找到，正文里藏得再深也会尽量捞出来。"
         count={hits.length}

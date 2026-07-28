@@ -41,7 +41,7 @@ export default function AdminPages({
       <header className="admin-heading">
         <span className="micro-label">PAGE FILES / ABOUT + NOW</span>
         <h1>固定页面</h1>
-        <p>ABOUT 是完整人物档案；NOW 会同时出现在首页和关于页。</p>
+        <p>ABOUT 是完整个人介绍；NOW 会同时出现在首页和关于页。</p>
       </header>
       {actionData?.ok ? <p className="form-message form-message--success">{actionData.message}</p> : null}
       {actionData && !actionData.ok ? <p className="form-message form-message--error">{actionData.error}</p> : null}
@@ -60,11 +60,11 @@ export default function AdminPages({
                 <input name="title" defaultValue={page.title} required />
               </label>
               <label className="field">
-                <span>系统眉题 <small>EYEBROW</small></span>
+                <span>页面眉题 <small>EYEBROW</small></span>
                 <input name="eyebrow" defaultValue={page.eyebrow} />
               </label>
               <label className="field field--wide">
-                <span>安全 MDX 内容</span>
+                <span>MDX 内容</span>
                 <textarea name="contentMdx" rows={18} defaultValue={page.contentMdx} />
               </label>
             </div>

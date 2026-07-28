@@ -11,12 +11,12 @@ export function PageHeading({
 }) {
   return (
     <header className="page-heading">
-      <span className="security-pill">{eyebrow}</span>
+      <span className="scrap-label">{eyebrow}</span>
       <h1>{title}</h1>
       <p>{lead}</p>
       {typeof count === "number" ? (
         <span className="page-heading__count" aria-label={`${count} 条内容`}>
-          FILES / {String(count).padStart(2, "0")}
+          共 {String(count).padStart(2, "0")} 张
         </span>
       ) : null}
     </header>

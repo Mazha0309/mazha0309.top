@@ -36,7 +36,7 @@ export default function AdminDashboard({
   return (
     <>
       <header className="admin-heading">
-        <span className="micro-label">CONTROL DESK / ALL SYSTEMS</span>
+        <span className="micro-label">MY WRITING DESK / 内容抽屉</span>
         <h1>今天要动哪张纸？</h1>
         <p>保存后的内容直接进入数据库，不需要重新构建镜像。</p>
       </header>
