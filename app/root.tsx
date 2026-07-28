@@ -13,6 +13,7 @@ import stylesheet from "./styles/global.css?url";
 import articleStylesheet from "./styles/article.css?url";
 import { getSiteShell } from "./lib/content.server";
 import { SearchPalette } from "./components/search-palette";
+import { getAdminSession } from "./lib/auth.server";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
@@ -34,8 +35,19 @@ export const meta: MetaFunction<typeof loader> = ({ loaderData }) => [
   },
 ];
 
-export async function loader(_args: LoaderFunctionArgs) {
-  return getSiteShell();
+export function headers() {
+  return {
+    "Cache-Control": "private, no-store",
+    Vary: "Cookie",
+  };
+}
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const [shell, adminSession] = await Promise.all([
+    getSiteShell(),
+    getAdminSession(request),
+  ]);
+  return { ...shell, isAdmin: Boolean(adminSession) };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -80,7 +92,7 @@ function Brand({
 }
 
 export default function App() {
-  const { profile, links } = useLoaderData<typeof loader>();
+  const { profile, links, isAdmin } = useLoaderData<typeof loader>();
   const customization = profile.customization;
   const navigation = links.filter((link) => link.kind === "nav" && link.url);
   const socials = links.filter((link) => link.kind === "social" && link.url);
@@ -109,6 +121,16 @@ export default function App() {
           ))}
         </nav>
         <div className="header-tools">
+          {isAdmin ? (
+            <NavLink
+              className="tool-button admin-tool-button"
+              to="/admin"
+              aria-label="打开管理员后台"
+            >
+              <span aria-hidden="true">✎</span>
+              <span className="tool-button__text">ADMIN</span>
+            </NavLink>
+          ) : null}
           <SearchPalette />
         </div>
       </header>

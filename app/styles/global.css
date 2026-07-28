@@ -284,6 +284,11 @@ img {
   font-family: var(--font-system);
   font-size: 0.64rem;
   font-weight: 700;
+  text-decoration: none;
+}
+
+.admin-tool-button {
+  background: var(--pink-soft);
 }
 
 .tool-button > span:first-child {
