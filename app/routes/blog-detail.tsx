@@ -63,7 +63,7 @@ export default function BlogDetail({
       </Link>
       <article>
         <header className="article-header">
-          <span className="security-pill">BLOG FILE / {post.id.slice(0, 8)}</span>
+          <span className="scrap-label">BLOG NOTE / 新鲜墨迹</span>
           <h1>{post.title}</h1>
           <p className="article-deck">{post.summary}</p>
           <div className="article-byline">

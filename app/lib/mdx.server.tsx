@@ -136,10 +136,7 @@ export async function renderSafeMdx(source: string) {
       [
         rehypePrettyCode,
         {
-          theme: {
-            dark: "github-dark-dimmed",
-            light: "github-light",
-          },
+          theme: "github-light",
           keepBackground: false,
         },
       ],

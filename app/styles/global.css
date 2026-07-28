@@ -1,12 +1,19 @@
-@import "@fontsource/ma-shan-zheng/400.css";
 @import "@fontsource-variable/noto-sans-sc";
 @import "@fontsource-variable/comfortaa";
 
+@font-face {
+  font-family: "Xiaolai";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/xiaolai-regular.woff2") format("woff2");
+}
+
 :root {
-  --font-display: "Ma Shan Zheng", "Noto Sans SC Variable", "PingFang SC",
+  --font-display: "Xiaolai", "Noto Sans SC Variable", "PingFang SC",
     "Microsoft YaHei", sans-serif;
-  --font-body: "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei",
-    system-ui, sans-serif;
+  --font-body: "Xiaolai", "Noto Sans SC Variable", "PingFang SC",
+    "Microsoft YaHei", system-ui, sans-serif;
   --font-system: "Comfortaa Variable", ui-monospace, "SFMono-Regular",
     Consolas, monospace;
   --paper: #f4efe5;
@@ -32,30 +39,6 @@
   --radius: 22px 18px 24px 16px;
   --content: 1180px;
   color-scheme: light;
-}
-
-:root[data-theme="midnight"] {
-  --paper: #201f2a;
-  --paper-raised: #2a2835;
-  --paper-soft: #302e3a;
-  --ink: #f5ebef;
-  --ink-muted: #c4b9c6;
-  --line: rgba(245, 235, 239, 0.1);
-  --pink: #f078a6;
-  --pink-soft: #563447;
-  --yellow: #e8d56e;
-  --yellow-soft: #50492d;
-  --blue: #75cce2;
-  --blue-soft: #294652;
-  --mint: #91d7bf;
-  --mint-soft: #29483e;
-  --lavender: #b7aae9;
-  --lavender-soft: #403a5b;
-  --orange: #f0a152;
-  --danger: #ff8092;
-  --shadow: 6px 7px 0 #0e0d14;
-  --shadow-small: 3px 4px 0 #0e0d14;
-  color-scheme: dark;
 }
 
 *,
@@ -226,7 +209,7 @@ img {
 .site-nav {
   display: flex;
   justify-content: center;
-  gap: clamp(0.7rem, 2vw, 2rem);
+  gap: clamp(1.1rem, 2.4vw, 2.4rem);
 }
 
 .site-nav a {
@@ -296,7 +279,7 @@ img {
   box-shadow: none;
 }
 
-.security-pill,
+.scrap-label,
 .micro-label {
   display: inline-flex;
   width: fit-content;
@@ -307,7 +290,7 @@ img {
   letter-spacing: 0.06em;
 }
 
-.security-pill {
+.scrap-label {
   padding: 0.52rem 0.82rem 0.43rem;
   color: #28242e;
   font-size: 0.68rem;
@@ -438,6 +421,10 @@ img {
   line-height: 0.96;
   letter-spacing: 0.005em;
   text-wrap: balance;
+}
+
+.hero-copy {
+  min-width: 0;
 }
 
 .hero-copy h1::after {
@@ -2046,7 +2033,9 @@ img {
   }
 
   .hero-copy h1 {
-    font-size: clamp(3.8rem, 18vw, 5.7rem);
+    max-width: 100%;
+    font-size: clamp(3.25rem, 15vw, 4.8rem);
+    letter-spacing: -0.01em;
   }
 
   .hero-actions {

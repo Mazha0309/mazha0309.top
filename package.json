@@ -23,6 +23,7 @@
     "@uiw/react-codemirror": "latest",
     "better-auth": "latest",
     "drizzle-orm": "latest",
+    "isbot": "^5",
     "pg": "latest",
     "react": "latest",
     "react-dom": "latest",
@@ -34,16 +35,14 @@
     "remark-parse": "latest",
     "sharp": "latest",
     "shiki": "latest",
+    "tsx": "latest",
     "unified": "latest",
     "unist-util-visit": "latest",
-    "zod": "latest",
-    "isbot": "^5",
-    "tsx": "latest"
+    "zod": "latest"
   },
   "devDependencies": {
     "@fontsource-variable/comfortaa": "^5.3.0",
     "@fontsource-variable/noto-sans-sc": "^5.3.0",
-    "@fontsource/ma-shan-zheng": "^5.3.0",
     "@playwright/test": "latest",
     "@react-router/dev": "latest",
     "@react-router/node": "latest",

@@ -224,11 +224,6 @@
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
 
-[data-theme="midnight"] .prose [data-theme="light"],
-[data-theme="paper"] .prose [data-theme="dark"] {
-  display: none;
-}
-
 .mdx-note {
   position: relative;
   max-width: 720px;

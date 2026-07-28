@@ -6,7 +6,7 @@ import { getAdminSession } from "../lib/auth.server";
 import { isSafeInternalPath } from "../lib/content-utils";
 
 export const meta: MetaFunction = () => [
-  { title: "控制台身份核验 — Mazha0309" },
+  { title: "主人入口 — Mazha0309" },
   { name: "robots", content: "noindex, nofollow" },
 ];
 
@@ -35,13 +35,13 @@ export default function AdminLogin({
 
   return (
     <div className="admin-login content-width">
-      <span className="security-pill">OWNER CHECK / PRIVATE DRAWER</span>
+      <span className="scrap-label">PRIVATE DRAWER / 主人入口</span>
       <div className="admin-login__card">
         <span className="tape tape--top" aria-hidden="true" />
-        <p className="micro-label">GITHUB ID REQUIRED / 99137842</p>
-        <h1>先证明你是这张桌子的主人</h1>
+        <p className="micro-label">GITHUB LOGIN / 99137842</p>
+        <h1>打开自己的内容抽屉</h1>
         <p>
-          这里只有一个座位。GitHub 会负责核验，邮箱和密码都不在这里保存。
+          这里只给站点主人留了一个座位。使用 GitHub 登录，不在这里保存邮箱和密码。
         </p>
         <button
           className="button button--primary"
@@ -55,7 +55,7 @@ export default function AdminLogin({
               callbackURL,
             });
             if (result?.error) {
-              setError(result.error.message ?? "GitHub 身份核验失败。");
+              setError(result.error.message ?? "GitHub 登录失败。");
               setBusy(false);
             }
           }}

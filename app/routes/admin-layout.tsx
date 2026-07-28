@@ -36,7 +36,7 @@ export default function AdminLayout({
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <header>
-          <span className="security-pill">CMS / OWNER MODE</span>
+          <span className="scrap-label">CMS / MY DRAWER</span>
           <h2>内容抽屉</h2>
           <p>{loaderData.user.name}</p>
         </header>

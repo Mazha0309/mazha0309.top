@@ -9,10 +9,10 @@ import {
 import {
   fallbackLinks,
   fallbackPages,
-  fallbackPosts,
   fallbackProfile,
   fallbackProjects,
 } from "../app/lib/seed-content";
+import { and, eq, sql } from "drizzle-orm";
 
 async function main() {
   const db = getDb();
@@ -25,6 +25,19 @@ async function main() {
     })
     .onConflictDoNothing();
 
+  await db
+    .update(siteProfiles)
+    .set({
+      heroEyebrow: fallbackProfile.heroEyebrow,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(siteProfiles.id, fallbackProfile.id),
+        eq(siteProfiles.heroEyebrow, "PERSONAL TERMINAL / ONLINE"),
+      ),
+    );
+
   const existingLinks = await db
     .select({ id: contentLinks.id })
     .from(contentLinks)
@@ -36,19 +49,15 @@ async function main() {
     }
   }
 
-  for (const post of fallbackPosts) {
-    const { readingMinutes: _readingMinutes, ...values } = post;
-    await db
-      .insert(posts)
-      .values({
-        ...values,
-        publishedAt: values.publishedAt ? new Date(values.publishedAt) : null,
-        scheduledAt: values.scheduledAt ? new Date(values.scheduledAt) : null,
-        createdAt: values.createdAt ? new Date(values.createdAt) : new Date(),
-        updatedAt: values.updatedAt ? new Date(values.updatedAt) : new Date(),
-      })
-      .onConflictDoNothing();
-  }
+  await db
+    .delete(posts)
+    .where(
+      and(
+        eq(posts.id, "8ef65724-7d2a-4e65-a58f-3a5a5a7f4b35"),
+        eq(posts.slug, "hello-from-the-desk"),
+        eq(posts.title, "总之，先把这里搭起来"),
+      ),
+    );
 
   for (const project of fallbackProjects) {
     await db
@@ -86,6 +95,32 @@ async function main() {
       })
       .onConflictDoNothing();
   }
+
+  await db
+    .update(pages)
+    .set({ eyebrow: "ABOUT ME / 一点自我介绍", updatedAt: new Date() })
+    .where(
+      and(
+        eq(pages.slug, "about"),
+        eq(pages.eyebrow, "SUBJECT FILE / 0309"),
+      ),
+    );
+  await db
+    .update(pages)
+    .set({
+      contentMdx: sql`replace(${pages.contentMdx}, '<Stamp>100% 可疑但真诚</Stamp>', '<Stamp>认真制作，真心欢迎</Stamp>')`,
+      updatedAt: new Date(),
+    })
+    .where(eq(pages.slug, "about"));
+  await db
+    .update(pages)
+    .set({ eyebrow: "THESE DAYS / 最近", updatedAt: new Date() })
+    .where(
+      and(
+        eq(pages.slug, "now"),
+        eq(pages.eyebrow, "LIVE STATUS / RECENTLY"),
+      ),
+    );
 
   console.log("Initial content is present.");
   await getPool().end();
