@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ProjectIconMark } from "../app/components/project-icon-mark";
 import {
   isAllowedProjectIconUrl,
   normalizeProjectIconValue,
@@ -17,14 +20,15 @@ describe("project icon choices", () => {
   });
 
   it("honors preset glyphs and explicit frames", () => {
-    expect(
-      resolveProjectIcon({
-        id: "radio",
-        iconMode: "preset",
-        iconValue: "heart",
-        iconShape: "circle",
-      }),
-    ).toMatchObject({ glyph: "♡", shape: "circle" });
+    const icon = resolveProjectIcon({
+      id: "radio",
+      iconMode: "preset",
+      iconValue: "heart",
+      iconShape: "circle",
+    });
+    expect(icon).toMatchObject({ glyph: "♡", shape: "circle" });
+    expect(icon.variant).toBeGreaterThanOrEqual(0);
+    expect(icon.variant).toBeLessThan(4);
   });
 
   it("limits custom text by unicode characters", () => {
@@ -36,5 +40,22 @@ describe("project icon choices", () => {
     expect(isAllowedProjectIconUrl("https://example.com/icon.png")).toBe(true);
     expect(isAllowedProjectIconUrl("//example.com/icon.png")).toBe(false);
     expect(isAllowedProjectIconUrl("javascript:alert(1)")).toBe(false);
+  });
+
+  it("renders complete organic SVG frames instead of clipped CSS polygons", () => {
+    const html = renderToStaticMarkup(
+      createElement(ProjectIconMark, {
+        project: {
+          id: "soft-ticket",
+          iconMode: "preset",
+          iconValue: "spark",
+          iconShape: "ticket",
+        },
+      }),
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("project-card__symbol-outline");
+    expect(html).toContain("project-card__symbol-scratch");
+    expect(html).not.toContain("<img");
   });
 });

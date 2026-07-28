@@ -110,16 +110,18 @@ export function resolveProjectIcon(input: {
     requestedShape === "random"
       ? stablePick(concreteShapes, seed, "shape")
       : requestedShape;
+  const variant = stableNumber(`${seed}:frame-variant`) % 4;
 
   if (mode === "image") {
     const imageUrl = normalizeProjectIconValue(mode, input.iconValue ?? "");
-    if (imageUrl) return { mode, shape, glyph: "", imageUrl };
+    if (imageUrl) return { mode, shape, variant, glyph: "", imageUrl };
   }
 
   if (mode === "custom") {
     return {
       mode,
       shape,
+      variant,
       glyph: normalizeProjectIconValue(mode, input.iconValue ?? ""),
       imageUrl: "",
     };
@@ -133,5 +135,5 @@ export function resolveProjectIcon(input: {
             value === normalizeProjectIconValue("preset", input.iconValue ?? ""),
         ) ?? projectIconPresets[0];
 
-  return { mode, shape, glyph: preset.glyph, imageUrl: "" };
+  return { mode, shape, variant, glyph: preset.glyph, imageUrl: "" };
 }
