@@ -40,6 +40,7 @@ export default [
     route("system", "routes/admin-system.tsx"),
   ]),
   ...prefix("api/admin", [
+    route("music/import", "routes/api-admin-music-import.ts"),
     route("posts/:id/autosave", "routes/api-admin-autosave.ts"),
     route("preview", "routes/api-admin-preview.ts"),
     route("probe", "routes/api-admin-probe.ts"),

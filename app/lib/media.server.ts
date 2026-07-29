@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -137,6 +138,7 @@ export async function storeAudio(file: File, label: string) {
   if (!looksLikeAudio(bytes, format.extension)) {
     throw new Error("这个文件的内容不像它声称的音频格式，先不让它混进歌单。");
   }
+  const fingerprint = createHash("sha256").update(bytes).digest("hex");
 
   const warnings: string[] = [];
   let embedded: EmbeddedAudioMetadata = {
@@ -225,6 +227,7 @@ export async function storeAudio(file: File, label: string) {
     });
     return {
       record,
+      fingerprint,
       embedded: {
         title: embedded.title,
         artist: embedded.artist,

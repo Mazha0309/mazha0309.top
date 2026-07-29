@@ -199,6 +199,7 @@ export interface MusicTrackRecord {
   title: string;
   artist: string;
   audioUrl: string;
+  sourceFingerprint?: string | null;
   coverUrl?: string | null;
   lyrics: string;
   position: number;
