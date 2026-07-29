@@ -36,6 +36,7 @@ import {
   estimateReadingMinutes,
   mdxToText,
   normalizeTextLineBreaks,
+  resolvePostSlug,
   slugify,
   splitTags,
 } from "./content-utils";
@@ -393,7 +394,13 @@ export async function savePost(
   const [current] = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
   if (!current) throw new Response("Post not found", { status: 404 });
 
-  const nextSlug = slugify(input.slug || input.title) || current.slug;
+  const nextSlug = resolvePostSlug({
+    currentSlug: current.slug,
+    currentTitle: current.title,
+    currentStatus: current.status,
+    submittedSlug: input.slug,
+    nextTitle: input.title,
+  });
   if (current.slug !== nextSlug) {
     await db
       .insert(postSlugs)
