@@ -24,6 +24,26 @@ fi
 echo "Pulling $APP_IMAGE"
 docker compose pull app
 
+echo "Starting PostgreSQL"
+docker compose up -d --no-build postgres
+
+database_ready=false
+for _attempt in {1..30}; do
+  if docker compose exec -T postgres sh -c \
+    'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+    >/dev/null 2>&1; then
+    database_ready=true
+    break
+  fi
+  sleep 2
+done
+
+if [[ "$database_ready" != true ]]; then
+  echo "PostgreSQL did not become ready." >&2
+  docker compose logs --tail=120 postgres >&2 || true
+  exit 1
+fi
+
 echo "Applying forward-only database migrations"
 docker compose run --rm --no-deps app npm run db:migrate
 docker compose run --rm --no-deps app npm run db:seed

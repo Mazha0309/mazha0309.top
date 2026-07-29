@@ -6,7 +6,7 @@ Mazha0309 的动态个人主页 + Blog。它是一张会生长的数字工作台
 
 - React Router 8 Framework Mode 全栈 SSR
 - PostgreSQL + Drizzle，内容更新不需要重新构建网站
-- Better Auth + GitHub OAuth，仅允许 GitHub 数字 ID `99137842`
+- Better Auth + GitHub OAuth，访客可领取评论身份，后台仍只允许 GitHub 数字 ID `99137842`
 - 自制 CMS：文章、项目、友链、ABOUT、NOW、媒体、统计与可视化全站自定义
 - 项目图标支持固定预设、稳定随机、短文字 / Emoji、自定义图片和 9 种外框
 - 管理员资源探针：CPU 负载、主机/Node 内存、磁盘、PostgreSQL 延迟/容量/连接池和运行时长
@@ -14,7 +14,8 @@ Mazha0309 的动态个人主页 + Blog。它是一张会生长的数字工作台
 - 草稿、独立预览、定时发布、旧 slug 永久跳转
 - PostgreSQL `pg_trgm` 搜索，标题和标签权重高于正文
 - 图片持久卷、WebP / AVIF 变体、必填 alt、拒绝 SVG
-- Giscus 评论，稳定映射为 `post:<uuid>`
+- 原生站内评论、楼中楼、管理员审核，以及可自由开关的 OpenAI Chat Completions 兼容 AI 审核
+- AI 审核使用固定高优先级策略、严格 JSON Schema、服务端二次校验与 fail-closed 待审兜底
 - 固定暖纸张主题，不提供容易破坏手账配色的深色模式
 - 自托管小赖字体，常用简体中文完整覆盖，生僻字回退思源黑体
 - RSS、Sitemap、存活/就绪探针和隐私友好的日聚合统计
@@ -82,6 +83,7 @@ npm run dev
 
 - `/admin`
 - `/admin/posts`
+- `/admin/comments`
 - `/admin/projects`
 - `/admin/friends`
 - `/admin/pages`
@@ -152,6 +154,8 @@ GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
 ALLOWED_GITHUB_ID=99137842
 APP_HOST_PORT=3000
+# 可选；开启 AI 评论审核前填写
+AI_MODERATION_API_KEY=...
 ```
 
 生成 Auth Secret：
@@ -173,18 +177,20 @@ sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
 
-### 5. Giscus
+### 5. 评论与 AI 审核
 
-在公开源码仓库启用 Discussions，安装 Giscus App，并创建分类 `Blog Comments`。把 Giscus 页面给出的四个值写入 VPS `.env`：
+评论使用站内 PostgreSQL 存储。访客通过 GitHub OAuth 登录后可以留言和回复，
+但只有 `ALLOWED_GITHUB_ID` 对应账号能进入后台。
 
-```dotenv
-GISCUS_REPO=Mazha0309/mazha0309.top
-GISCUS_REPO_ID=...
-GISCUS_CATEGORY=Blog Comments
-GISCUS_CATEGORY_ID=...
-```
+AI 审核默认关闭。若要启用，在 VPS `.env` 填写
+`AI_MODERATION_API_KEY`（也兼容 `OPENAI_API_KEY`），随后进入
+`/admin/comments` 设置开关、Chat API Base URL、模型和站点附加规则。
+API Key 只从服务端环境变量读取，后台不会显示或写进数据库与备份。
 
-未填写时文章仍正常显示，只会出现“评论频道还没接上”的占位纸条。
+审核请求使用 OpenAI Chat Completions 兼容的 `/chat/completions` 协议。
+模型只有分类权，没有工具或数据库权限；评论作为 JSON 编码的不可信 user
+数据传入，输出必须匹配严格 JSON Schema。超时、拒答、格式错误或缺少 Key
+时一律进入人工待审，不会自动公开。
 
 ## GitHub Actions 自动部署
 
@@ -225,6 +231,7 @@ GHCR Package 首次出现后，把可见性设为 Public；若保持 Private，�
 
 - 站点身份、导航、社交链接
 - 文章、旧 slug、版本记录
+- 评论与非敏感审核设置（不含 API Key）
 - 项目、友链、ABOUT、NOW
 - 媒体元数据和 `/data/media`
 - 校验和
@@ -268,6 +275,6 @@ npm run test:e2e
 
 - 定时发布是查询时判定：`scheduled_at <= now()` 即视为公开，无需 cron。
 - 旧 slug 保存在独立表，访问后以 `301` 跳到当前 slug。
-- Giscus 使用文章 UUID，不随 slug 改名丢失讨论串。
+- 评论使用文章 UUID，不随 slug 改名丢失讨论串。
 - 浏览统计只存“日期、路径、次数”，不存完整 IP；浏览器和服务端都尊重 DNT / GPC。
 - 数据库迁移是向前的。自动回滚只切换应用镜像，不逆向回滚已经成功执行的 Schema 变更，因此破坏性迁移必须拆成兼容的多阶段发布。

@@ -20,7 +20,6 @@
     "@codemirror/lang-markdown": "latest",
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.7",
-    "@giscus/react": "latest",
     "@mdx-js/mdx": "latest",
     "@react-router/serve": "latest",
     "@uiw/react-codemirror": "latest",

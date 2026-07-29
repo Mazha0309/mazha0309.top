@@ -10,8 +10,12 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import type { SiteCustomization } from "./types";
+import type {
+  CommentModerationSnapshot,
+  SiteCustomization,
+} from "./types";
 
 export const siteProfiles = pgTable("site_profiles", {
   id: text("id").primaryKey().default("main"),
@@ -115,6 +119,62 @@ export const postRevisions = pgTable(
       .defaultNow(),
   },
   (table) => [index("post_revisions_post_created_idx").on(table.postId, table.createdAt)],
+);
+
+export const commentSettings = pgTable("comment_settings", {
+  id: text("id").primaryKey().default("main"),
+  aiEnabled: boolean("ai_enabled").notNull().default(false),
+  apiBaseUrl: text("api_base_url")
+    .notNull()
+    .default("https://api.openai.com/v1"),
+  model: text("model").notNull().default("gpt-5.6-luna"),
+  extraPolicy: text("extra_policy").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const comments = pgTable(
+  "comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id").references(
+      (): AnyPgColumn => comments.id,
+      { onDelete: "cascade" },
+    ),
+    authorId: text("author_id").notNull(),
+    authorGithubId: text("author_github_id"),
+    authorName: text("author_name").notNull(),
+    authorAvatarUrl: text("author_avatar_url"),
+    body: text("body").notNull(),
+    status: text("status", {
+      enum: ["active", "pending", "rejected", "hidden", "deleted"],
+    })
+      .notNull()
+      .default("active"),
+    moderation: jsonb("moderation")
+      .$type<CommentModerationSnapshot>()
+      .notNull()
+      .default({}),
+    moderatedBy: text("moderated_by"),
+    moderatedAt: timestamp("moderated_at", { withTimezone: true }),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("comments_post_created_idx").on(table.postId, table.createdAt),
+    index("comments_parent_idx").on(table.parentId),
+    index("comments_status_created_idx").on(table.status, table.createdAt),
+    index("comments_author_created_idx").on(table.authorId, table.createdAt),
+  ],
 );
 
 export const projects = pgTable(
