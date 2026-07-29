@@ -26,6 +26,7 @@
     "better-auth": "latest",
     "drizzle-orm": "latest",
     "isbot": "^5",
+    "music-metadata": "11.14.0",
     "pg": "latest",
     "react": "latest",
     "react-dom": "latest",

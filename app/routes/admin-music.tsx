@@ -16,6 +16,7 @@ import {
 import { formString, requireSameOrigin } from "../lib/security.server";
 import { isAllowedMediaUrl } from "../lib/site-customization";
 import type { MusicTrackRecord } from "../lib/types";
+import { audioTitleFromFilename } from "../lib/audio-metadata.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await requireAdmin(request);
@@ -69,11 +70,14 @@ export async function action({ request }: ActionFunctionArgs) {
       };
     }
 
-    const title = formString(form, "title", { max: 160 });
-    if (!title) throw new Error("歌名还空着，播放器会认不出它喔。");
-    const artist = formString(form, "artist", { max: 160 });
+    let title = formString(form, "title", { max: 160 });
+    let artist = formString(form, "artist", { max: 160 });
+    let lyrics = formString(form, "lyrics", { max: 80_000 });
     let audioUrl = formString(form, "audioUrl", { max: 600 });
     let coverUrl = formString(form, "coverUrl", { max: 600 });
+    let embeddedCoverUrl = "";
+    const discovered: string[] = [];
+    const warnings: string[] = [];
     if (!isAllowedMediaUrl(audioUrl)) {
       throw new Error("音频地址只能使用站内路径或 HTTP(S) 地址。");
     }
@@ -83,15 +87,44 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const audioFile = fileFrom(form, "audioFile");
     if (audioFile) {
-      const storedAudio = await storeAudio(audioFile, `${title} / 音频`);
-      createdMediaIds.push(storedAudio.id);
-      audioUrl = storedAudio.variants.original;
+      const storedAudio = await storeAudio(
+        audioFile,
+        `${title || audioTitleFromFilename(audioFile.name)} / 音频`,
+      );
+      createdMediaIds.push(storedAudio.record.id);
+      audioUrl = storedAudio.record.variants.original;
+      warnings.push(...storedAudio.warnings);
+      if (!title && storedAudio.embedded.title) {
+        title = storedAudio.embedded.title;
+        discovered.push("歌名");
+      }
+      if (!artist && storedAudio.embedded.artist) {
+        artist = storedAudio.embedded.artist;
+        discovered.push("歌手");
+      }
+      if (!lyrics && storedAudio.embedded.lyrics) {
+        lyrics = storedAudio.embedded.lyrics;
+        discovered.push(
+          storedAudio.embedded.synchronizedLyrics ? "同步歌词" : "歌词",
+        );
+      }
+      embeddedCoverUrl = storedAudio.embedded.coverUrl ?? "";
+    }
+    if (!title && audioFile) {
+      title = audioTitleFromFilename(audioFile.name);
+      discovered.push("文件名歌名");
     }
     const coverFile = fileFrom(form, "coverFile");
     if (coverFile) {
       const storedCover = await storeImage(coverFile, `${title} 的音乐封面`);
       createdMediaIds.push(storedCover.id);
       coverUrl = storedCover.variants.webp ?? storedCover.variants.original;
+    } else if (!coverUrl && embeddedCoverUrl) {
+      coverUrl = embeddedCoverUrl;
+      discovered.push("内嵌封面");
+    }
+    if (!title) {
+      throw new Error("远程音频没有可读标签，还是要给它写个歌名喔。");
     }
     if (!audioUrl) {
       throw new Error("还没有音频：上传一首，或者贴一个可以播放的地址。");
@@ -103,7 +136,7 @@ export async function action({ request }: ActionFunctionArgs) {
       artist,
       audioUrl,
       coverUrl: coverUrl || null,
-      lyrics: formString(form, "lyrics", { max: 80_000 }),
+      lyrics,
       position: numericPosition(formString(form, "position", { max: 8 })),
       enabled: form.get("enabled") === "on",
     });
@@ -111,7 +144,15 @@ export async function action({ request }: ActionFunctionArgs) {
       ok: true,
       intent,
       recordId: track.id,
-      message: `「${track.title}」已经塞进播放清单啦。`,
+      message: [
+        `「${track.title}」已经塞进播放清单啦。`,
+        discovered.length
+          ? `自动从音频里捡到：${discovered.join("、")}。`
+          : "",
+        ...warnings,
+      ]
+        .filter(Boolean)
+        .join(" "),
     };
   } catch (error) {
     await Promise.all(
@@ -132,12 +173,22 @@ function TrackFields({ track }: { track?: MusicTrackRecord }) {
       {track ? <input type="hidden" name="id" value={track.id} /> : null}
       <div className="form-grid music-track-fields">
         <label className="field">
-          <span>歌名 <small>TITLE / REQUIRED</small></span>
-          <input name="title" defaultValue={track?.title ?? ""} maxLength={160} required />
+          <span>歌名 <small>TITLE / TAG AUTO</small></span>
+          <input
+            name="title"
+            defaultValue={track?.title ?? ""}
+            maxLength={160}
+            placeholder="空着就读音频标签"
+          />
         </label>
         <label className="field">
-          <span>歌手 <small>ARTIST</small></span>
-          <input name="artist" defaultValue={track?.artist ?? ""} maxLength={160} />
+          <span>歌手 <small>ARTIST / TAG AUTO</small></span>
+          <input
+            name="artist"
+            defaultValue={track?.artist ?? ""}
+            maxLength={160}
+            placeholder="空着就读音频标签"
+          />
         </label>
         <label className="field field--wide">
           <span>音频地址 <small>INTERNAL / HTTP(S)</small></span>
@@ -150,16 +201,20 @@ function TrackFields({ track }: { track?: MusicTrackRecord }) {
           />
         </label>
         <label className="field field--wide music-upload-field">
-          <span>上传音频 <small>MP3 / M4A / OGG / WAV · MAX 32 MB</small></span>
+          <span>上传音频 <small>FLAC / MP3 / WAV · MAX 64 MB</small></span>
           <input
             name="audioFile"
             type="file"
-            accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,audio/wav,audio/x-wav"
+            accept=".flac,.mp3,.wav,.m4a,.ogg,audio/flac,audio/x-flac,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/ogg"
           />
-          <small>{track ? "选新文件会替换上面的音频地址。" : "也可以只填上面的远程地址。"}</small>
+          <small>
+            {track
+              ? "选新文件会替换音频；把文字项清空，才会让新文件的标签接管。"
+              : "会自动读取歌名、歌手、内嵌封面与歌词；手填内容优先。"}
+          </small>
         </label>
         <label className="field">
-          <span>封面地址 <small>OPTIONAL</small></span>
+          <span>封面地址 <small>OPTIONAL / TAG AUTO</small></span>
           <input
             name="coverUrl"
             inputMode="url"
@@ -169,7 +224,7 @@ function TrackFields({ track }: { track?: MusicTrackRecord }) {
           />
         </label>
         <label className="field music-upload-field">
-          <span>上传封面 <small>IMAGE / MAX 8 MB</small></span>
+          <span>另传封面 <small>OVERRIDE / MAX 8 MB</small></span>
           <input
             name="coverFile"
             type="file"
@@ -177,12 +232,12 @@ function TrackFields({ track }: { track?: MusicTrackRecord }) {
           />
         </label>
         <label className="field field--wide">
-          <span>歌词 <small>LRC / PLAIN TEXT</small></span>
+          <span>歌词 <small>LRC / TEXT / TAG AUTO</small></span>
           <textarea
             name="lyrics"
             rows={9}
             defaultValue={track?.lyrics ?? ""}
-            placeholder={"[00:03.20] 第一行会跟着进度亮起来\n[00:08.60] 第二行也会\n\n没有时间戳也没关系，会当普通歌词显示。"}
+            placeholder={"空着就读取音频内嵌歌词。\n\n也可以手动贴：\n[00:03.20] 第一行会跟着进度亮起来\n[00:08.60] 第二行也会"}
           />
         </label>
         <label className="field">
@@ -235,7 +290,7 @@ export default function AdminMusic({
       <header className="admin-heading">
         <span className="micro-label">POCKET RADIO / 小窗歌单</span>
         <h1>给右下角塞几首歌</h1>
-        <p>访客点唱片按钮才会播放，不会一进门就突然开演。只上传你有权公开播放的音频喔。</p>
+        <p>FLAC、MP3、WAV 里的歌名、歌手、封面和歌词会自己跳出来；手填内容会优先覆盖标签。</p>
       </header>
       {actionData?.ok ? (
         <p className="form-message form-message--success">{actionData.message}</p>

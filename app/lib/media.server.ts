@@ -7,22 +7,21 @@ import {
   findMediaReferences,
   getMediaRecord,
 } from "./content.server";
+import {
+  readEmbeddedAudioMetadata,
+  resolveAudioFileFormat,
+  type AudioExtension,
+  type EmbeddedAudioMetadata,
+} from "./audio-metadata.server";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const MAX_AUDIO_BYTES = 32 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 64 * 1024 * 1024;
+const MAX_EMBEDDED_COVER_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
   "image/jpeg",
   "image/webp",
   "image/gif",
-]);
-const AUDIO_EXTENSIONS = new Map([
-  ["audio/mpeg", "mp3"],
-  ["audio/mp4", "m4a"],
-  ["audio/x-m4a", "m4a"],
-  ["audio/ogg", "ogg"],
-  ["audio/wav", "wav"],
-  ["audio/x-wav", "wav"],
 ]);
 
 export function mediaRoot() {
@@ -105,56 +104,136 @@ function looksLikeMp3(bytes: Buffer) {
   return false;
 }
 
-function looksLikeAudio(bytes: Buffer, mimeType: string) {
-  if (mimeType === "audio/mpeg") return looksLikeMp3(bytes);
-  if (mimeType === "audio/ogg") {
+function looksLikeAudio(bytes: Buffer, extension: AudioExtension) {
+  if (extension === "mp3") return looksLikeMp3(bytes);
+  if (extension === "flac") {
+    return bytes.subarray(0, 4).toString("ascii") === "fLaC";
+  }
+  if (extension === "ogg") {
     return bytes.subarray(0, 4).toString("ascii") === "OggS";
   }
-  if (mimeType === "audio/wav" || mimeType === "audio/x-wav") {
+  if (extension === "wav") {
     return (
       bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
       bytes.subarray(8, 12).toString("ascii") === "WAVE"
     );
   }
-  if (mimeType === "audio/mp4" || mimeType === "audio/x-m4a") {
+  if (extension === "m4a") {
     return bytes.subarray(4, 8).toString("ascii") === "ftyp";
   }
   return false;
 }
 
 export async function storeAudio(file: File, label: string) {
-  const extension = AUDIO_EXTENSIONS.get(file.type);
-  if (!extension) {
-    throw new Error("只接受 MP3、M4A、OGG 或 WAV 音频。");
+  const format = resolveAudioFileFormat(file);
+  if (!format) {
+    throw new Error("只接受 FLAC、MP3、WAV、M4A 或 OGG 音频。");
   }
   if (file.size <= 0 || file.size > MAX_AUDIO_BYTES) {
-    throw new Error("音频大小必须在 1 B 到 32 MB 之间。");
+    throw new Error("音频大小必须在 1 B 到 64 MB 之间。");
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  if (!looksLikeAudio(bytes, file.type)) {
+  if (!looksLikeAudio(bytes, format.extension)) {
     throw new Error("这个文件的内容不像它声称的音频格式，先不让它混进歌单。");
   }
 
+  const warnings: string[] = [];
+  let embedded: EmbeddedAudioMetadata = {
+    title: "",
+    artist: "",
+    lyrics: "",
+    synchronizedLyrics: false,
+    picture: null,
+  };
+  try {
+    embedded = await readEmbeddedAudioMetadata(bytes, file, format);
+  } catch {
+    warnings.push("音频能收下，但内嵌标签没有读懂，需要手动补资料。");
+  }
+
   const id = crypto.randomUUID();
-  const originalName = `original.${extension}`;
+  const originalName = `original.${format.extension}`;
   const directory = path.join(mediaRoot(), id);
   await mkdir(directory, { recursive: true });
+  const variants: Record<string, string> = {
+    original: `/media/${id}/${originalName}`,
+  };
 
   try {
     await writeFile(path.join(directory, originalName), bytes, { flag: "wx" });
-    return await createMediaRecord({
+    if (embedded.picture) {
+      const picture = Buffer.from(embedded.picture.data);
+      if (
+        picture.byteLength <= 0 ||
+        picture.byteLength > MAX_EMBEDDED_COVER_BYTES
+      ) {
+        warnings.push("看见了内嵌封面，但它超过 8 MB，所以没有展开。");
+      } else {
+        const webpName = "cover.webp";
+        const avifName = "cover.avif";
+        try {
+          const pictureMetadata = await sharp(picture, {
+            limitInputPixels: 40_000_000,
+          }).metadata();
+          if (!pictureMetadata.width || !pictureMetadata.height) {
+            throw new Error("embedded picture has no dimensions");
+          }
+          await Promise.all([
+            sharp(picture, { limitInputPixels: 40_000_000 })
+              .rotate()
+              .resize({
+                width: 1200,
+                height: 1200,
+                fit: "inside",
+                withoutEnlargement: true,
+              })
+              .webp({ quality: 84 })
+              .toFile(path.join(directory, webpName)),
+            sharp(picture, { limitInputPixels: 40_000_000 })
+              .rotate()
+              .resize({
+                width: 1200,
+                height: 1200,
+                fit: "inside",
+                withoutEnlargement: true,
+              })
+              .avif({ quality: 66 })
+              .toFile(path.join(directory, avifName)),
+          ]);
+          variants.coverWebp = `/media/${id}/${webpName}`;
+          variants.coverAvif = `/media/${id}/${avifName}`;
+        } catch {
+          await Promise.all([
+            rm(path.join(directory, webpName), { force: true }),
+            rm(path.join(directory, avifName), { force: true }),
+          ]).catch(() => undefined);
+          warnings.push("看见了内嵌封面，但图片格式太怪，没有强行展开。");
+        }
+      }
+    }
+
+    const record = await createMediaRecord({
       storageKey: `${id}/${originalName}`,
       originalName: file.name,
-      mimeType: file.type,
-      alt: label.trim() || file.name,
+      mimeType: format.mimeType,
+      alt: embedded.title || label.trim() || file.name,
       width: null,
       height: null,
       sizeBytes: file.size,
-      variants: {
-        original: `/media/${id}/${originalName}`,
-      },
+      variants,
     });
+    return {
+      record,
+      embedded: {
+        title: embedded.title,
+        artist: embedded.artist,
+        lyrics: embedded.lyrics,
+        synchronizedLyrics: embedded.synchronizedLyrics,
+        coverUrl: variants.coverWebp ?? null,
+      },
+      warnings,
+    };
   } catch (error) {
     await rm(directory, { recursive: true, force: true }).catch(() => undefined);
     throw error;
@@ -207,6 +286,7 @@ export function mediaContentType(filename: string) {
   if (filename.endsWith(".png")) return "image/png";
   if (filename.endsWith(".gif")) return "image/gif";
   if (filename.endsWith(".mp3")) return "audio/mpeg";
+  if (filename.endsWith(".flac")) return "audio/flac";
   if (filename.endsWith(".m4a")) return "audio/mp4";
   if (filename.endsWith(".ogg")) return "audio/ogg";
   if (filename.endsWith(".wav")) return "audio/wav";
