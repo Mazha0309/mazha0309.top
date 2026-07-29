@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import type { CSSProperties } from "react";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import { getHomepageContent, getSiteShell } from "../lib/content.server";
 import { renderSafeMdx } from "../lib/mdx.server";
@@ -29,10 +30,22 @@ export async function loader(_args: LoaderFunctionArgs) {
   return { profile, ...content, nowHtml };
 }
 
+function buildMarqueeLoop(value: string) {
+  const phrase = `${value.trim()}\u00a0`;
+  const phraseLength = Math.max(1, Array.from(phrase).length);
+  const repetitions = Math.max(2, Math.ceil(420 / phraseLength));
+  const line = phrase.repeat(repetitions);
+  const durationSeconds = Math.max(48, Math.round(Array.from(line).length / 4));
+  return { line, durationSeconds };
+}
+
 export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<typeof loader>> }) {
   const { profile, posts, projects, nowHtml } = loaderData;
   const customization = profile.customization;
   const showLowerDesk = customization.showBlog || customization.showNow;
+  const marquee = customization.marqueeText
+    ? buildMarqueeLoop(customization.marqueeText)
+    : null;
 
   const renderAction = (
     label: string,
@@ -97,18 +110,22 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
         </div>
       </section>
 
-      {customization.marqueeText ? (
+      {marquee ? (
         <section
           className="marquee-strip"
           aria-label={`站点状态：${customization.marqueeText}`}
         >
-          <div className="marquee-strip__track" aria-hidden="true">
+          <div
+            className="marquee-strip__track"
+            aria-hidden="true"
+            style={{
+              animationDuration: `${marquee.durationSeconds}s`,
+            } satisfies CSSProperties}
+          >
             {[0, 1].map((group) => (
-              <div className="marquee-strip__group" key={group}>
-                {Array.from({ length: 4 }, (_, item) => (
-                  <span key={item}>{customization.marqueeText}</span>
-                ))}
-              </div>
+              <span className="marquee-strip__group" key={group}>
+                {marquee.line}
+              </span>
             ))}
           </div>
         </section>

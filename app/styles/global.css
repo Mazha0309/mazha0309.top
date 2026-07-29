@@ -664,21 +664,15 @@ img {
 .marquee-strip__track {
   display: flex;
   width: max-content;
-  animation: marquee 64s linear infinite;
+  animation: marquee 96s linear infinite;
   will-change: transform;
 }
 
 .marquee-strip__group {
-  display: flex;
+  display: block;
   min-width: min(100vw, 1500px);
   flex: none;
-  align-items: center;
-  justify-content: space-around;
-}
-
-.marquee-strip__group span {
-  flex: none;
-  padding: 0.72rem 1.15rem;
+  padding: 0.72rem 0;
   font-family: var(--font-system);
   font-size: 0.75rem;
   font-weight: 800;
