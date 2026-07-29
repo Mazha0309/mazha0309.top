@@ -219,6 +219,12 @@ GHCR Package 首次出现后，把可见性设为 Public；若保持 Private，�
 
 第一次部署可以从 Actions 手动运行 `Deploy VPS`。之后合并到 `main` 即自动上线。
 
+针对 1 GB VPS，生产编排默认给应用设置 512 MB 内存上限、给 PostgreSQL
+设置 256 MB 内存上限，并压低 PostgreSQL 的连接数和缓存规模。可在 VPS
+`.env` 中用 `APP_MEMORY_LIMIT`、`APP_MEMORY_SWAP_LIMIT`、
+`POSTGRES_MEMORY_LIMIT`、`POSTGRES_MEMORY_SWAP_LIMIT` 覆盖。主机仍建议配置
+1–2 GB Swap；容器日志会轮转为每个服务最多 3 × 10 MB。
+
 ## 备份
 
 手动生成并校验：
@@ -250,7 +256,10 @@ GHCR Package 首次出现后，把可见性设为 Public；若保持 Private，�
 | --- | --- |
 | `BACKUP_REPO_TOKEN` | 仅允许向私有备份仓库创建 / 删除 Release 的细粒度 Token |
 
-工作流每天创建一个私有 Release Asset，保留 14 份 daily 和 8 份 weekly。
+把该 Token 放入 `production` Environment；它只需对私有备份仓库授予
+Contents Read and write。工作流每天创建一个私有 Release Asset，保留 14 份
+daily 和 8 份 weekly。媒体只压缩一次，并使用低 CPU 压缩级别；上传成功后会
+删除 VPS 上的临时归档。
 
 实际恢复会替换当前 CMS 内容，必须显式确认：
 

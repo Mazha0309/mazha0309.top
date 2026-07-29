@@ -9,6 +9,13 @@ timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 archive_name="mazha-home-cms-${timestamp}.tar.gz"
 
 mkdir -p "$output_dir"
+find "$output_dir" \
+  -maxdepth 1 \
+  -type f \
+  -name 'mazha-home-cms-*.tar.gz' \
+  -mtime +2 \
+  -delete
+
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
 
@@ -37,12 +44,12 @@ echo "Exporting CMS tables (auth and analytics are intentionally excluded)."
   > "$work_dir/content.dump"
 
 echo "Exporting persistent media."
-"${compose[@]}" exec -T app tar -C /data/media -czf - . \
-  > "$work_dir/media.tar.gz"
+"${compose[@]}" exec -T app tar -C /data/media -cf - . \
+  > "$work_dir/media.tar"
 
 (
   cd "$work_dir"
-  sha256sum content.dump media.tar.gz > SHA256SUMS
+  sha256sum content.dump media.tar > SHA256SUMS
   cat > BACKUP-NOTES.txt <<'EOF'
 This archive contains CMS content, revisions, comments, comment moderation settings,
 projects, friend links, page settings, music tracks, media metadata, and media files. Better Auth
@@ -50,7 +57,8 @@ tables, sessions, OAuth tokens, secrets, and raw analytics are deliberately excl
 
 This backup is not encrypted. Store it only in the dedicated private repository.
 EOF
-  tar -czf "$archive_name" content.dump media.tar.gz SHA256SUMS BACKUP-NOTES.txt
+  tar -cf - content.dump media.tar SHA256SUMS BACKUP-NOTES.txt |
+    nice -n 10 gzip -1 > "$archive_name"
 )
 
 mv "$work_dir/$archive_name" "$output_dir/$archive_name"

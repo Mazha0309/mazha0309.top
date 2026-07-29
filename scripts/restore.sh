@@ -48,7 +48,16 @@ compose=(docker compose -f "$compose_file")
   --disable-triggers \
   < "$work_dir/content.dump"
 
-"${compose[@]}" exec -T app tar -C /data/media -xzf - \
-  < "$work_dir/media.tar.gz"
+if [[ -f "$work_dir/media.tar" ]]; then
+  "${compose[@]}" exec -T app tar -C /data/media -xf - \
+    < "$work_dir/media.tar"
+elif [[ -f "$work_dir/media.tar.gz" ]]; then
+  # Compatibility with the original, double-compressed backup format.
+  "${compose[@]}" exec -T app tar -C /data/media -xzf - \
+    < "$work_dir/media.tar.gz"
+else
+  echo "Backup does not contain a media archive." >&2
+  exit 1
+fi
 
 echo "CMS content and media restored. Auth and analytics were left untouched."

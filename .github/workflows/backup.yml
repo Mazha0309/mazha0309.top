@@ -15,9 +15,25 @@ permissions:
 jobs:
   backup:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    environment: production
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Validate backup configuration
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+        run: |
+          for name in SSH_PRIVATE_KEY SSH_KNOWN_HOSTS HOST USER DEPLOY_PATH BACKUP_REPO_TOKEN; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required production secret: $name"
+              exit 1
+            fi
+          done
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -34,10 +50,26 @@ jobs:
           USER: ${{ secrets.VPS_USER }}
           DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
         run: |
-          ssh "$USER@$HOST" "mkdir -p '$DEPLOY_PATH/scripts'"
-          scp scripts/backup.sh "$USER@$HOST:$DEPLOY_PATH/scripts/backup.sh"
-          remote_path="$(ssh "$USER@$HOST" "cd '$DEPLOY_PATH' && chmod +x scripts/backup.sh && BACKUP_OUTPUT_DIR=backups scripts/backup.sh" | tail -n 1)"
-          scp "$USER@$HOST:$DEPLOY_PATH/$remote_path" ./cms-backup.tar.gz
+          ssh_options=(
+            -o BatchMode=yes
+            -o ConnectTimeout=20
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=20
+          )
+          ssh "${ssh_options[@]}" "$USER@$HOST" "mkdir -p '$DEPLOY_PATH/scripts'"
+          scp "${ssh_options[@]}" scripts/backup.sh "$USER@$HOST:$DEPLOY_PATH/scripts/backup.sh"
+          remote_path="$(
+            ssh "${ssh_options[@]}" "$USER@$HOST" \
+              "cd '$DEPLOY_PATH' && chmod +x scripts/backup.sh && BACKUP_OUTPUT_DIR=backups nice -n 10 scripts/backup.sh" |
+              tail -n 1
+          )"
+          if [[ ! "$remote_path" =~ ^backups/mazha-home-cms-[0-9]{8}T[0-9]{6}Z\.tar\.gz$ ]]; then
+            echo "::error::Backup script returned an unexpected path: $remote_path"
+            exit 1
+          fi
+          scp "${ssh_options[@]}" "$USER@$HOST:$DEPLOY_PATH/$remote_path" ./cms-backup.tar.gz
+          ssh "${ssh_options[@]}" "$USER@$HOST" "rm -f '$DEPLOY_PATH/$remote_path'"
       - name: Publish private release assets
         env:
           GH_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
