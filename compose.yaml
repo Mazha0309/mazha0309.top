@@ -4,6 +4,25 @@ services:
   postgres:
     image: postgres:17-bookworm
     restart: unless-stopped
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-256m}
+    memswap_limit: ${POSTGRES_MEMORY_SWAP_LIMIT:-384m}
+    mem_reservation: ${POSTGRES_MEMORY_RESERVATION:-64m}
+    pids_limit: 128
+    shm_size: 64m
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - effective_cache_size=256MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=30
+      - -c
+      - autovacuum_max_workers=1
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mazha_home}
       POSTGRES_USER: ${POSTGRES_USER:-mazha}
@@ -19,6 +38,11 @@ services:
       interval: 5s
       timeout: 4s
       retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
 
   app:
     image: ${APP_IMAGE:-mazha0309-top:local}
@@ -26,6 +50,10 @@ services:
       context: .
       target: runtime
     restart: unless-stopped
+    mem_limit: ${APP_MEMORY_LIMIT:-512m}
+    memswap_limit: ${APP_MEMORY_SWAP_LIMIT:-768m}
+    mem_reservation: ${APP_MEMORY_RESERVATION:-128m}
+    pids_limit: 128
     ports:
       - "127.0.0.1:${APP_HOST_PORT:-3000}:3000"
     env_file:
@@ -37,6 +65,8 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
       MEDIA_ROOT: /data/media
       DATABASE_URL: postgresql://${POSTGRES_USER:-mazha}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mazha_home}
+      NODE_OPTIONS: ${APP_NODE_OPTIONS:---max-old-space-size=256}
+      MALLOC_ARENA_MAX: "2"
     volumes:
       - media_data:/data/media
     networks:
@@ -55,6 +85,11 @@ services:
       timeout: 4s
       start_period: 25s
       retries: 4
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
 
 volumes:
   postgres_data:
