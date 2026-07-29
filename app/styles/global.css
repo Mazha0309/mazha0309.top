@@ -5825,6 +5825,17 @@ img {
   font-size: 2.5rem;
 }
 
+.media-audio-preview > img {
+  width: 82px;
+  height: 82px;
+  aspect-ratio: 1;
+  justify-self: center;
+  object-fit: cover;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
 @keyframes music-window-pop {
   from {
     opacity: 0;

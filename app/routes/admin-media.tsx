@@ -91,7 +91,11 @@ export default function AdminMedia({
           <article key={item.id}>
             {item.mimeType.startsWith("audio/") ? (
               <div className="media-audio-preview">
-                <span aria-hidden="true">♫</span>
+                {item.variants.coverWebp ? (
+                  <img src={item.variants.coverWebp} alt="" loading="lazy" />
+                ) : (
+                  <span aria-hidden="true">♫</span>
+                )}
                 <audio controls preload="metadata" src={item.variants.original}>
                   你的浏览器暂时不会播放这个音频。
                 </audio>
