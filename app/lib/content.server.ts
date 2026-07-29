@@ -17,6 +17,7 @@ import {
   contentLinks,
   friendLinks,
   media,
+  musicTracks,
   pages,
   postRevisions,
   postSlugs,
@@ -45,6 +46,7 @@ import type {
   ContentLink,
   FriendLinkRecord,
   MediaRecord,
+  MusicTrackRecord,
   PageRecord,
   PostRecord,
   ProjectRecord,
@@ -574,6 +576,86 @@ export async function deleteFriendLink(id: string) {
   await getDb().delete(friendLinks).where(eq(friendLinks.id, id));
 }
 
+export async function listMusicTracks(
+  options: { includeDisabled?: boolean } = {},
+) {
+  if (!hasDatabase()) return [] as MusicTrackRecord[];
+  const query = getDb().select().from(musicTracks);
+  const rows = options.includeDisabled
+    ? await query.orderBy(
+        asc(musicTracks.position),
+        asc(musicTracks.createdAt),
+      )
+    : await query
+        .where(eq(musicTracks.enabled, true))
+        .orderBy(asc(musicTracks.position), asc(musicTracks.createdAt));
+  return rows as MusicTrackRecord[];
+}
+
+export async function saveMusicTrack(input: {
+  id?: string;
+  title: string;
+  artist: string;
+  audioUrl: string;
+  coverUrl: string | null;
+  lyrics: string;
+  position: number;
+  enabled: boolean;
+}) {
+  if (!hasDatabase()) throw new Error("音乐写入需要数据库。");
+  const values = {
+    title: input.title,
+    artist: input.artist,
+    audioUrl: input.audioUrl,
+    coverUrl: input.coverUrl,
+    lyrics: input.lyrics,
+    position: input.position,
+    enabled: input.enabled,
+    updatedAt: new Date(),
+  };
+  if (input.id) {
+    const [saved] = await getDb()
+      .update(musicTracks)
+      .set(values)
+      .where(eq(musicTracks.id, input.id))
+      .returning();
+    if (!saved) throw new Error("这首歌已经不在播放清单里了。");
+    return saved as MusicTrackRecord;
+  }
+  const [saved] = await getDb().insert(musicTracks).values(values).returning();
+  return saved as MusicTrackRecord;
+}
+
+export async function deleteMusicTrack(id: string) {
+  if (!hasDatabase()) throw new Error("音乐写入需要数据库。");
+  await getDb().delete(musicTracks).where(eq(musicTracks.id, id));
+}
+
+export async function moveMusicTrack(
+  id: string,
+  direction: "up" | "down",
+) {
+  if (!hasDatabase()) throw new Error("音乐写入需要数据库。");
+  const db = getDb();
+  const rows = await db
+    .select({ id: musicTracks.id })
+    .from(musicTracks)
+    .orderBy(asc(musicTracks.position), asc(musicTracks.createdAt));
+  const currentIndex = rows.findIndex((row) => row.id === id);
+  if (currentIndex < 0) throw new Error("这首歌已经不在播放清单里了。");
+  const nextIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+  if (nextIndex < 0 || nextIndex >= rows.length) return;
+  [rows[currentIndex], rows[nextIndex]] = [rows[nextIndex], rows[currentIndex]];
+  await db.transaction(async (transaction) => {
+    for (const [position, row] of rows.entries()) {
+      await transaction
+        .update(musicTracks)
+        .set({ position, updatedAt: new Date() })
+        .where(eq(musicTracks.id, row.id));
+    }
+  });
+}
+
 export async function listPages() {
   if (!hasDatabase()) return fallbackPages;
   return (await getDb().select().from(pages).orderBy(asc(pages.slug))) as PageRecord[];
@@ -647,6 +729,7 @@ export async function findMediaReferences(storageId: string) {
     friendRows,
     pageRows,
     linkRows,
+    musicRows,
   ] = await Promise.all([
     db
       .select({ label: siteProfiles.displayName })
@@ -685,6 +768,15 @@ export async function findMediaReferences(storageId: string) {
       .select({ label: contentLinks.label })
       .from(contentLinks)
       .where(like(contentLinks.url, pattern)),
+    db
+      .select({ label: musicTracks.title })
+      .from(musicTracks)
+      .where(
+        or(
+          like(musicTracks.audioUrl, pattern),
+          like(musicTracks.coverUrl, pattern),
+        ),
+      ),
   ]);
 
   return [
@@ -694,6 +786,7 @@ export async function findMediaReferences(storageId: string) {
     ...friendRows.map(({ label }) => `友链「${label}」`),
     ...pageRows.map(({ label }) => `页面「${label}」`),
     ...linkRows.map(({ label }) => `导航「${label}」`),
+    ...musicRows.map(({ label }) => `音乐「${label}」`),
   ];
 }
 

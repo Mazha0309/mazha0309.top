@@ -31,6 +31,7 @@ const adminGroups = [
       ["/admin/projects", "PROJECTS", "项目", "◇"],
       ["/admin/friends", "FRIENDS", "友链", "♡"],
       ["/admin/pages", "PAGES", "页面", "▤"],
+      ["/admin/music", "MUSIC", "音乐", "♫"],
       ["/admin/media", "MEDIA", "媒体", "▧"],
     ],
   },

@@ -2,7 +2,7 @@ import { Form, useActionData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { listMedia } from "../lib/content.server";
 import { requireAdmin } from "../lib/auth.server";
-import { deleteStoredImage, storeImage } from "../lib/media.server";
+import { deleteStoredMedia, storeImage } from "../lib/media.server";
 import { formString, requireSameOrigin } from "../lib/security.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -18,10 +18,10 @@ export async function action({ request }: ActionFunctionArgs) {
     const intent = formString(form, "intent", { max: 20 });
     if (intent === "delete") {
       const id = formString(form, "id", { required: true, max: 64 });
-      const record = await deleteStoredImage(id);
+      const record = await deleteStoredMedia(id);
       return {
         ok: true,
-        message: `已经删除 ${record.originalName} 及其图片变体。`,
+        message: `已经删除 ${record.originalName} 及其媒体变体。`,
       };
     }
 
@@ -54,7 +54,7 @@ export default function AdminMedia({
       <header className="admin-heading">
         <span className="micro-label">MEDIA DRAWER / PERSISTENT VOLUME</span>
         <h1>图片与附件</h1>
-        <p>接受 PNG / JPEG / WebP / GIF，最大 8 MB；SVG 会被拒绝。自动生成 WebP 与 AVIF。</p>
+        <p>图片在这里上传；音乐页上传的音频也会收进同一个持久化抽屉。</p>
       </header>
       {actionData?.ok ? (
         <p className="form-message form-message--success">
@@ -89,12 +89,24 @@ export default function AdminMedia({
       <div className="media-grid">
         {loaderData.media.map((item) => (
           <article key={item.id}>
-            <img src={item.variants.webp ?? item.variants.original} alt={item.alt} loading="lazy" />
+            {item.mimeType.startsWith("audio/") ? (
+              <div className="media-audio-preview">
+                <span aria-hidden="true">♫</span>
+                <audio controls preload="metadata" src={item.variants.original}>
+                  你的浏览器暂时不会播放这个音频。
+                </audio>
+              </div>
+            ) : (
+              <img src={item.variants.webp ?? item.variants.original} alt={item.alt} loading="lazy" />
+            )}
             <div>
               <strong>{item.originalName}</strong>
               <p>{item.alt}</p>
               <code>{item.variants.webp ?? item.variants.original}</code>
-              <small>{item.width}×{item.height} · {(item.sizeBytes / 1024).toFixed(0)} KB</small>
+              <small>
+                {item.width && item.height ? `${item.width}×${item.height} · ` : ""}
+                {(item.sizeBytes / 1024).toFixed(0)} KB
+              </small>
               <Form method="post" className="media-card__actions">
                 <input type="hidden" name="id" value={item.id} />
                 <button
@@ -112,7 +124,7 @@ export default function AdminMedia({
                     }
                   }}
                 >
-                  删除图片
+                  删除媒体
                 </button>
               </Form>
             </div>
