@@ -134,6 +134,16 @@ export const commentSettings = pgTable("comment_settings", {
     .defaultNow(),
 });
 
+// Kept separate from content settings so CMS backups never contain API secrets.
+// The value is additionally encrypted at rest before it reaches this table.
+export const commentSecrets = pgTable("comment_secrets", {
+  id: text("id").primaryKey().default("main"),
+  apiKeyCiphertext: text("api_key_ciphertext").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const comments = pgTable(
   "comments",
   {
