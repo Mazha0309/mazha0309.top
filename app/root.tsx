@@ -7,14 +7,20 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useLocation,
   useRouteLoaderData,
 } from "react-router";
 import type { LinksFunction, LoaderFunctionArgs, MetaFunction } from "react-router";
 import stylesheet from "./styles/global.css?url";
 import articleStylesheet from "./styles/article.css?url";
-import { getPublicAnalyticsTotals, getSiteShell } from "./lib/content.server";
+import {
+  getPublicAnalyticsTotals,
+  getSiteShell,
+  listMusicTracks,
+} from "./lib/content.server";
 import { SearchPalette } from "./components/search-palette";
 import { SiteLedger } from "./components/site-ledger";
+import { FloatingMusicPlayer } from "./components/floating-music-player";
 import { getSession, isAdminSession } from "./lib/auth.server";
 
 export const links: LinksFunction = () => [
@@ -44,14 +50,16 @@ export function headers() {
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const [shell, session, analytics] = await Promise.all([
+  const [shell, session, analytics, musicTracks] = await Promise.all([
     getSiteShell(),
     getSession(request),
     getPublicAnalyticsTotals(),
+    listMusicTracks(),
   ]);
   return {
     ...shell,
     analytics,
+    musicTracks,
     serverNow: Date.now(),
     isAdmin: isAdminSession(session),
     viewer: session
@@ -117,99 +125,113 @@ export default function App() {
     serverNow,
     isAdmin,
     viewer,
+    musicTracks,
   } = useLoaderData<typeof loader>();
+  const location = useLocation();
   const customization = profile.customization;
   const navigation = links.filter((link) => link.kind === "nav" && link.url);
   const socials = links.filter((link) => link.kind === "social" && link.url);
 
+  const isAdminPath = location.pathname.startsWith("/admin");
+
   return (
-    <div className="site-frame" data-accent={customization.accentColor}>
-      <a className="skip-link" href="#main">
-        跳到正文
-      </a>
-      <header className="site-header">
-        <Brand
-          displayName={profile.displayName}
-          mark={customization.brandMark}
-          subtitle={customization.brandSubtitle}
-        />
-        <nav className="site-nav" aria-label="主要导航">
-          {navigation.map((item) => (
-            <NavLink
-              key={item.id}
-              to={item.url}
-              end={item.url === "/"}
-              className={({ isActive }) => (isActive ? "is-active" : undefined)}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="header-tools">
-          {isAdmin ? (
-            <NavLink
-              className="tool-button admin-tool-button"
-              to="/admin"
-              aria-label="打开管理员后台"
-            >
-              <span aria-hidden="true">✎</span>
-              <span className="tool-button__text">ADMIN</span>
-            </NavLink>
-          ) : viewer ? (
-            <span
-              className="tool-button viewer-tool-button"
-              aria-label={`已使用 GitHub 登录：${viewer.name}`}
-              title={viewer.name}
-            >
-              {viewer.image ? (
-                <img src={viewer.image} alt="" referrerPolicy="no-referrer" />
-              ) : (
-                <span aria-hidden="true">✓</span>
-              )}
-              <span className="tool-button__text">SIGNED</span>
-            </span>
-          ) : (
-            <NavLink
-              className="tool-button login-tool-button"
-              to="/admin/login"
-              aria-label="登录管理员后台"
-            >
-              <span aria-hidden="true">登</span>
-              <span className="tool-button__text">LOGIN</span>
-            </NavLink>
-          )}
-          <SearchPalette />
-        </div>
-      </header>
-
-      <main id="main">
-        <Outlet />
-      </main>
-
-      <footer className="site-footer">
-        <SiteLedger
-          startedAt={customization.siteLaunchedAt}
-          views={analytics.views}
-          uniqueVisitors={analytics.uniqueVisitors}
-          serverNow={serverNow}
-        />
-        <div>
-          <span className="micro-label">SEE YOU AROUND / {new Date().getFullYear()}</span>
-          <p>
-            © {profile.displayName}{customization.footerText ? ` · ${customization.footerText}` : ""}
-          </p>
-        </div>
-        {socials.length > 0 ? (
-          <nav aria-label="社交链接" className="footer-links">
-            {socials.map((link) => (
-              <a key={link.id} href={link.url} rel="me noreferrer">
-                {link.label} ↗
-              </a>
+    <>
+      <div className="site-frame" data-accent={customization.accentColor}>
+        <a className="skip-link" href="#main">
+          跳到正文
+        </a>
+        <header className="site-header">
+          <Brand
+            displayName={profile.displayName}
+            mark={customization.brandMark}
+            subtitle={customization.brandSubtitle}
+          />
+          <nav className="site-nav" aria-label="主要导航">
+            {navigation.map((item) => (
+              <NavLink
+                key={item.id}
+                to={item.url}
+                end={item.url === "/"}
+                className={({ isActive }) => (isActive ? "is-active" : undefined)}
+              >
+                {item.label}
+              </NavLink>
             ))}
           </nav>
-        ) : null}
-      </footer>
-    </div>
+          <div className="header-tools">
+            {isAdmin ? (
+              <NavLink
+                className="tool-button admin-tool-button"
+                to="/admin"
+                aria-label="打开管理员后台"
+              >
+                <span aria-hidden="true">✎</span>
+                <span className="tool-button__text">ADMIN</span>
+              </NavLink>
+            ) : viewer ? (
+              <span
+                className="tool-button viewer-tool-button"
+                aria-label={`已使用 GitHub 登录：${viewer.name}`}
+                title={viewer.name}
+              >
+                {viewer.image ? (
+                  <img src={viewer.image} alt="" referrerPolicy="no-referrer" />
+                ) : (
+                  <span aria-hidden="true">✓</span>
+                )}
+                <span className="tool-button__text">SIGNED</span>
+              </span>
+            ) : (
+              <NavLink
+                className="tool-button login-tool-button"
+                to="/admin/login"
+                aria-label="登录管理员后台"
+              >
+                <span aria-hidden="true">登</span>
+                <span className="tool-button__text">LOGIN</span>
+              </NavLink>
+            )}
+            <SearchPalette />
+          </div>
+        </header>
+
+        <main id="main">
+          <Outlet />
+        </main>
+
+        <footer className="site-footer">
+          <SiteLedger
+            startedAt={customization.siteLaunchedAt}
+            views={analytics.views}
+            uniqueVisitors={analytics.uniqueVisitors}
+            serverNow={serverNow}
+          />
+          <div>
+            <span className="micro-label">SEE YOU AROUND / {new Date().getFullYear()}</span>
+            <p>
+              © {profile.displayName}{customization.footerText ? ` · ${customization.footerText}` : ""}
+            </p>
+          </div>
+          {socials.length > 0 ? (
+            <nav aria-label="社交链接" className="footer-links">
+              {socials.map((link) => (
+                <a key={link.id} href={link.url} rel="me noreferrer">
+                  {link.label} ↗
+                </a>
+              ))}
+            </nav>
+          ) : null}
+        </footer>
+      </div>
+      {!isAdminPath && musicTracks.length ? (
+        <div
+          className="floating-music-layer"
+          data-accent={customization.accentColor}
+        >
+          <FloatingMusicPlayer tracks={musicTracks} />
+        </div>
+      ) : null}
+    </>
   );
 }
 

@@ -194,6 +194,19 @@ export interface PageRecord {
   updatedAt?: Date | string;
 }
 
+export interface MusicTrackRecord {
+  id: string;
+  title: string;
+  artist: string;
+  audioUrl: string;
+  coverUrl?: string | null;
+  lyrics: string;
+  position: number;
+  enabled: boolean;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
 export interface MediaRecord {
   id: string;
   storageKey: string;

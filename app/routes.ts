@@ -33,6 +33,7 @@ export default [
     route("friends", "routes/admin-friends.tsx"),
     route("pages", "routes/admin-pages.tsx"),
     route("now", "routes/admin-now.tsx"),
+    route("music", "routes/admin-music.tsx"),
     route("media", "routes/admin-media.tsx"),
     route("settings", "routes/admin-settings.tsx"),
     route("analytics", "routes/admin-analytics.tsx"),

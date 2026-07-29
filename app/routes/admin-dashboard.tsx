@@ -273,7 +273,7 @@ export default function AdminDashboard({
           <small>{loaderData.counts.hiddenFriends ? `${loaderData.counts.hiddenFriends} 张名片在躲猫猫` : "大家都亮着小灯"}</small>
         </article>
         <article>
-          <span>IMAGE POCKET / 图片口袋</span>
+          <span>MEDIA POCKET / 媒体口袋</span>
           <strong>{loaderData.counts.media}</strong>
           <small>轻轻装了 {loaderData.counts.mediaSize}</small>
         </article>
@@ -454,7 +454,7 @@ export default function AdminDashboard({
             <div className="stats-ledger__chips" aria-label="媒体格式分布">
               {loaderData.assetStats.mediaTypes.length
                 ? loaderData.assetStats.mediaTypes.map((item) => <span key={item.label}>{item.label} × {item.count}</span>)
-                : <small>图片口袋轻飘飘的</small>}
+                : <small>媒体口袋轻飘飘的</small>}
             </div>
           </section>
 
@@ -511,7 +511,8 @@ export default function AdminDashboard({
             <Link to="/admin/settings"><span>✦</span><strong>给主页梳梳毛</strong><small>品牌、文案、模块和链接</small></Link>
             <Link to="/admin/projects"><span>◇</span><strong>摆弄项目罐头</strong><small>排序、状态与展示卡片</small></Link>
             <Link to="/admin/friends"><span>♡</span><strong>请新邻居进门</strong><small>名片、头像与公开状态</small></Link>
-            <Link to="/admin/media"><span>▧</span><strong>往图片口袋里塞</strong><small>自动生成 WebP / AVIF</small></Link>
+            <Link to="/admin/music"><span>♫</span><strong>打理口袋电台</strong><small>曲目、歌词与播放顺序</small></Link>
+            <Link to="/admin/media"><span>▧</span><strong>翻翻媒体口袋</strong><small>图片、音频与持久化附件</small></Link>
             <Link to="/admin/comments"><span>◌</span><strong>去留言值班室</strong><small>{loaderData.counts.commentsPending ? `${loaderData.counts.commentsPending} 张等你拿主意` : "待审抽屉很安静"}</small></Link>
           </section>
         </div>

@@ -272,6 +272,32 @@ export const pages = pgTable("pages", {
     .defaultNow(),
 });
 
+export const musicTracks = pgTable(
+  "music_tracks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    artist: text("artist").notNull().default(""),
+    audioUrl: text("audio_url").notNull(),
+    coverUrl: text("cover_url"),
+    lyrics: text("lyrics").notNull().default(""),
+    position: integer("position").notNull().default(0),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("music_tracks_enabled_position_idx").on(
+      table.enabled,
+      table.position,
+    ),
+  ],
+);
+
 export const media = pgTable("media", {
   id: uuid("id").primaryKey().defaultRandom(),
   storageKey: text("storage_key").notNull().unique(),

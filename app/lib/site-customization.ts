@@ -116,3 +116,7 @@ export function isAllowedImageUrl(value: string) {
     return false;
   }
 }
+
+export function isAllowedMediaUrl(value: string) {
+  return isAllowedImageUrl(value);
+}

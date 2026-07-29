@@ -5303,3 +5303,593 @@ img {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Pocket radio: one floating button, one little paper window. */
+.floating-music-layer[data-accent="blue"] {
+  --pink: #329fbd;
+  --pink-soft: #c7e9f1;
+}
+
+.floating-music-layer[data-accent="mint"] {
+  --pink: #3f9279;
+  --pink-soft: #cde9df;
+}
+
+.floating-music-layer[data-accent="purple"] {
+  --pink: #806ac7;
+  --pink-soft: #ddd5f4;
+}
+
+.floating-music-layer[data-accent="orange"] {
+  --pink: #cf702f;
+  --pink-soft: #f5d5bf;
+}
+
+.floating-music {
+  position: fixed;
+  z-index: 90;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  display: grid;
+  justify-items: end;
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+.floating-music > audio {
+  display: none;
+}
+
+.floating-music__toggle {
+  position: relative;
+  display: flex;
+  min-width: 58px;
+  min-height: 58px;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0.4rem;
+  color: var(--ink);
+  cursor: pointer;
+  border: 3px solid var(--ink);
+  border-radius: 50% 46% 52% 43%;
+  background: var(--yellow);
+  box-shadow: 4px 5px 0 var(--ink);
+  transform: rotate(-2deg);
+  transition:
+    gap 160ms ease,
+    padding 160ms ease,
+    transform 120ms ease;
+}
+
+.floating-music__toggle:hover {
+  gap: 0.42rem;
+  padding-inline: 0.78rem;
+  transform: rotate(1deg) translateY(-2px);
+}
+
+.floating-music__toggle:active {
+  box-shadow: 1px 2px 0 var(--ink);
+  transform: translate(3px, 3px);
+}
+
+.floating-music__toggle-note {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  flex: 0 0 auto;
+  color: white;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--paper-raised) 0 9%, var(--ink) 10% 15%, transparent 16%),
+    var(--pink);
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.floating-music__toggle.is-playing .floating-music__toggle-note {
+  animation: music-disc-spin 4.5s linear infinite;
+}
+
+.floating-music__toggle-label {
+  width: 0;
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 800;
+  opacity: 0;
+  white-space: nowrap;
+  transition:
+    width 160ms ease,
+    opacity 120ms ease;
+}
+
+.floating-music__toggle:hover .floating-music__toggle-label,
+.floating-music.is-open .floating-music__toggle-label {
+  width: 3.4rem;
+  opacity: 1;
+}
+
+.floating-music__window {
+  position: absolute;
+  right: 0;
+  bottom: 76px;
+  width: min(350px, calc(100vw - 28px));
+  max-height: min(620px, calc(100vh - 118px));
+  padding: 1.05rem 1rem 0.9rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pink) transparent;
+  border: 3px solid var(--ink);
+  border-radius: 21px 15px 27px 12px;
+  background:
+    linear-gradient(color-mix(in srgb, var(--line) 60%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 60%, transparent) 1px, transparent 1px),
+    var(--paper-raised);
+  background-size: 20px 20px, 20px 20px, auto;
+  box-shadow: 7px 8px 0 var(--ink);
+  transform-origin: right bottom;
+  animation: music-window-pop 170ms ease-out both;
+}
+
+.floating-music__window::after {
+  position: absolute;
+  right: -14px;
+  bottom: 65px;
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
+  border-right: 3px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
+  background: var(--paper-raised);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.floating-music__tape {
+  position: absolute;
+  top: -4px;
+  left: 38%;
+  width: 72px;
+  height: 19px;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--yellow) 78%, transparent);
+  transform: rotate(-2deg);
+}
+
+.floating-music__header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px dashed color-mix(in srgb, var(--ink) 38%, transparent);
+}
+
+.floating-music__disc {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+  color: white;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--yellow) 0 9%, var(--ink) 10% 14%, transparent 15%),
+    var(--pink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 1.4rem;
+}
+
+.floating-music__disc img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.floating-music__disc.is-playing {
+  animation: music-disc-spin 7s linear infinite;
+}
+
+.floating-music__title {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.floating-music__title small {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-family: var(--font-system);
+  font-size: 0.48rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-music__title strong,
+.floating-music__title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-music__title strong {
+  margin-top: 0.16rem;
+  font-size: 1.06rem;
+}
+
+.floating-music__title span {
+  color: var(--ink-muted);
+  font-size: 0.7rem;
+}
+
+.floating-music__close {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font-family: var(--font-system);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.floating-music__close:hover {
+  background: var(--pink-soft);
+}
+
+.floating-music__current-lyric {
+  min-height: 3.4rem;
+  margin: 0.85rem 0 0.45rem;
+  padding: 0.45rem 0.55rem;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.floating-music__current-lyric::before,
+.floating-music__current-lyric::after {
+  color: var(--pink);
+  content: "～";
+}
+
+.floating-music__progress {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.floating-music__progress input {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--pink);
+}
+
+.floating-music__progress > div {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-muted);
+  font-family: var(--font-system);
+  font-size: 0.52rem;
+  font-weight: 800;
+}
+
+.floating-music__controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.7rem;
+  margin: 0.35rem 0 0.65rem;
+}
+
+.floating-music__controls button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  border: 2px solid var(--ink);
+  border-radius: 48% 52% 45% 55%;
+  background: var(--blue-soft);
+  box-shadow: 2px 3px 0 var(--ink);
+  font-family: var(--font-system);
+  font-weight: 900;
+}
+
+.floating-music__controls button:active {
+  box-shadow: none;
+  transform: translate(2px, 3px);
+}
+
+.floating-music__controls .floating-music__play {
+  width: 50px;
+  height: 50px;
+  color: white;
+  background: var(--pink);
+}
+
+.floating-music__error {
+  margin: 0 0 0.65rem;
+  color: var(--danger);
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.floating-music__tabs {
+  display: flex;
+  gap: 0.35rem;
+  padding-top: 0.55rem;
+  border-top: 2px dashed color-mix(in srgb, var(--ink) 38%, transparent);
+}
+
+.floating-music__tabs button {
+  min-height: 44px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.floating-music__tabs button[aria-pressed="true"] {
+  background: var(--yellow);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.floating-music__lyrics,
+.floating-music__playlist {
+  max-height: min(175px, 28vh);
+  margin-top: 0.35rem;
+  padding: 0.3rem 0.25rem 0.4rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pink) transparent;
+}
+
+.floating-music__lyrics button,
+.floating-music__lyrics p {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0.35rem 0.45rem;
+  color: var(--ink-muted);
+  text-align: center;
+  border: 0;
+  background: transparent;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.floating-music__lyrics button {
+  cursor: pointer;
+}
+
+.floating-music__lyrics button:hover {
+  color: var(--ink);
+}
+
+.floating-music__lyrics button.is-active {
+  color: var(--ink);
+  background:
+    linear-gradient(
+      transparent 58%,
+      color-mix(in srgb, var(--pink) 35%, transparent) 58% 90%,
+      transparent 90%
+    );
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.floating-music__lyrics .floating-music__empty {
+  padding-block: 1.5rem;
+  color: var(--ink-muted);
+}
+
+.floating-music__playlist {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.floating-music__playlist button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 48px;
+  align-items: center;
+  gap: 0 0.65rem;
+  padding: 0.42rem 0.55rem;
+  cursor: pointer;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+  background: transparent;
+}
+
+.floating-music__playlist button:hover,
+.floating-music__playlist button.is-active {
+  background: color-mix(in srgb, var(--yellow-soft) 72%, transparent);
+}
+
+.floating-music__playlist button > span {
+  grid-row: 1 / span 2;
+  color: var(--pink);
+  font-family: var(--font-system);
+  font-size: 0.56rem;
+  font-weight: 900;
+}
+
+.floating-music__playlist strong,
+.floating-music__playlist small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-music__playlist strong {
+  font-size: 0.75rem;
+}
+
+.floating-music__playlist small {
+  color: var(--ink-muted);
+  font-size: 0.58rem;
+}
+
+.music-upload-field > small {
+  color: var(--ink-muted);
+  font-size: 0.66rem;
+}
+
+.music-track-preview {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 0.5fr) minmax(220px, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0.9rem 0;
+  padding: 0.75rem 0;
+  border-block: 1.5px dashed color-mix(in srgb, var(--ink) 38%, transparent);
+}
+
+.music-track-preview > img,
+.music-track-preview > span {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  object-fit: cover;
+  color: white;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.music-track-preview > div {
+  display: grid;
+  min-width: 0;
+}
+
+.music-track-preview strong,
+.music-track-preview small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-track-preview small {
+  color: var(--ink-muted);
+}
+
+.music-track-preview audio,
+.media-audio-preview audio {
+  width: 100%;
+  min-width: 0;
+}
+
+.music-track-actions .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.media-audio-preview {
+  display: grid;
+  min-height: 150px;
+  place-content: center;
+  gap: 0.8rem;
+  padding: 1rem;
+  background: var(--blue-soft);
+}
+
+.media-audio-preview > span {
+  justify-self: center;
+  font-size: 2.5rem;
+}
+
+@keyframes music-window-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) rotate(1deg) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes music-disc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 620px) {
+  .floating-music {
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .floating-music__window {
+    bottom: 70px;
+    width: min(342px, calc(100vw - 24px));
+    max-height: calc(100dvh - 100px);
+    padding: 0.9rem 0.85rem 0.75rem;
+  }
+
+  .floating-music__toggle {
+    min-width: 54px;
+    min-height: 54px;
+  }
+
+  .floating-music__toggle-label {
+    display: none;
+  }
+
+  .floating-music__toggle-note {
+    width: 36px;
+    height: 36px;
+  }
+
+  .music-track-preview {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .music-track-preview audio {
+    grid-column: 1 / -1;
+  }
+
+  .music-track-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .music-track-actions .button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-music__disc.is-playing,
+  .floating-music__toggle.is-playing .floating-music__toggle-note {
+    animation: none;
+  }
+}
