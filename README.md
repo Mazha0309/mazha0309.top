@@ -118,16 +118,18 @@ npm run dev
 
 保留 Client ID 和 Client Secret，稍后放入 VPS `.env`。
 
-### 2. 确认 Caddy 的 Docker 网络
+### 2. 确认宿主机 Caddy
 
-Caddy 继续独占 80/443，应用容器不向公网映射端口。确认现有网络名：
+Caddy 通过 apt 安装并由 systemd 管理，继续独占 80/443。应用容器只把端口绑定到宿主机回环地址 `127.0.0.1:3000`，不会直接暴露到公网。
+
+确认 Caddy 正常运行，且 3000 端口尚未被占用：
 
 ```bash
-docker network ls
-docker network inspect caddy
+systemctl status caddy --no-pager
+ss -ltnp 'sport = :3000'
 ```
 
-若实际名称不是 `caddy`，在 `.env` 设置 `CADDY_NETWORK`。
+第二条没有输出即表示默认端口可用。若要改端口，同时修改 `.env` 中的 `APP_HOST_PORT` 和 Caddyfile 的 `reverse_proxy` 地址。
 
 ### 3. 创建部署目录和 `.env`
 
@@ -149,7 +151,7 @@ BETTER_AUTH_SECRET=至少32字节的随机值
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
 ALLOWED_GITHUB_ID=99137842
-CADDY_NETWORK=caddy
+APP_HOST_PORT=3000
 ```
 
 生成 Auth Secret：
@@ -162,16 +164,14 @@ openssl rand -base64 48
 
 ### 4. 接入现有 Caddyfile
 
-把 [`Caddyfile.example`](./Caddyfile.example) 中两段站点配置并入现有 Caddyfile。应用在共享网络上的固定别名是 `mazha-home-app:3000`。
+把 [`Caddyfile.example`](./Caddyfile.example) 中两段站点配置并入 `/etc/caddy/Caddyfile`。宿主机 Caddy 通过 `127.0.0.1:3000` 访问应用。
 
-然后按现有 Caddy 管理方式验证并 reload，例如：
+验证配置并让 systemd 平滑重载：
 
 ```bash
-docker exec caddy caddy validate --config /etc/caddy/Caddyfile
-docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
 ```
-
-容器名和配置路径以你的实际环境为准。
 
 ### 5. Giscus
 

@@ -8,7 +8,7 @@ mazha0309.top {
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 	}
 
-	reverse_proxy mazha-home-app:3000
+	reverse_proxy 127.0.0.1:3000
 }
 
 www.mazha0309.top {

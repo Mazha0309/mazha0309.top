@@ -26,6 +26,8 @@ services:
       context: .
       target: runtime
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_HOST_PORT:-3000}:3000"
     env_file:
       - path: .env
         required: false
@@ -38,10 +40,8 @@ services:
     volumes:
       - media_data:/data/media
     networks:
-      internal:
-      caddy:
-        aliases:
-          - mazha-home-app
+      - internal
+      - edge
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,6 +63,4 @@ volumes:
 networks:
   internal:
     internal: true
-  caddy:
-    external: true
-    name: ${CADDY_NETWORK:-caddy}
+  edge:
