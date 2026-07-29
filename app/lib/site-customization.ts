@@ -84,3 +84,21 @@ export function isAllowedDisplayUrl(value: string) {
     return false;
   }
 }
+
+export function isAllowedImageUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (
+    trimmed.startsWith("/") &&
+    !trimmed.startsWith("//") &&
+    !trimmed.includes("\\")
+  ) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}

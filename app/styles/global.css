@@ -3382,6 +3382,156 @@ img {
   font-size: 0.76rem;
 }
 
+.profile-avatar-editor {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  align-items: center;
+  gap: 1.15rem;
+  padding: 1rem 1rem 1.1rem;
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 42%, transparent);
+  border-left: 4px solid var(--pink);
+  border-radius: 4px 18px 9px 5px;
+  background: color-mix(in srgb, var(--blue-soft) 42%, var(--paper-raised));
+}
+
+.profile-avatar-editor__preview {
+  position: relative;
+  isolation: isolate;
+  width: 160px;
+  aspect-ratio: 1;
+}
+
+.profile-avatar-editor__preview::before {
+  position: absolute;
+  z-index: -1;
+  inset: 7px -7px -7px 7px;
+  content: "";
+  border: 2px solid var(--ink);
+  border-radius: 48% 42% 46% 43%;
+  background: var(--yellow);
+}
+
+.profile-avatar-editor__preview > img,
+.profile-avatar-editor__preview > span {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  object-fit: cover;
+  text-align: center;
+  border: 3px solid var(--ink);
+  border-radius: 44% 39% 46% 41%;
+  background: var(--paper-raised);
+}
+
+.profile-avatar-editor__preview > span {
+  padding: 1rem;
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.profile-avatar-editor__preview small {
+  position: absolute;
+  z-index: 2;
+  right: -8px;
+  bottom: -9px;
+  padding: 0.28rem 0.48rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--mint);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--font-system);
+  font-size: 0.48rem;
+  font-weight: 900;
+  white-space: nowrap;
+  transform: rotate(-2deg);
+}
+
+.profile-avatar-editor__controls {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+}
+
+.avatar-file-picker {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+}
+
+.avatar-file-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.avatar-file-picker > span {
+  min-height: 44px;
+  padding: 0.7rem 0.9rem;
+  border: 2px solid var(--ink);
+  border-radius: 15px 20px 14px 18px;
+  background: var(--pink);
+  box-shadow: 4px 4px 0 var(--ink);
+  font-weight: 850;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.avatar-file-picker:hover > span {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.avatar-file-picker:active > span {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.avatar-file-picker:focus-within > span {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+
+.avatar-file-picker output {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-family: var(--font-system);
+  font-size: 0.57rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-avatar-editor__note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.profile-avatar-editor__note p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.67rem;
+}
+
+.profile-avatar-editor__note .text-button {
+  flex: 0 0 auto;
+  color: var(--pink-dark);
+  font-size: 0.68rem;
+}
+
 .appearance-settings {
   display: grid;
   grid-template-columns: minmax(220px, 0.55fr) 1fr;
@@ -4015,6 +4165,37 @@ img {
   .form-grid,
   .media-grid {
     grid-template-columns: 1fr;
+  }
+
+  .profile-avatar-editor {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 1rem 0.85rem 1.1rem;
+  }
+
+  .profile-avatar-editor__preview {
+    width: min(58vw, 168px);
+  }
+
+  .profile-avatar-editor__controls {
+    width: 100%;
+  }
+
+  .avatar-file-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar-file-picker > span {
+    text-align: center;
+  }
+
+  .avatar-file-picker output {
+    text-align: center;
+  }
+
+  .profile-avatar-editor__note {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .admin-stat-grid,
