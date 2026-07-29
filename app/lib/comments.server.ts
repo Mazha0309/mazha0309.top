@@ -11,16 +11,21 @@ import {
   sql,
 } from "drizzle-orm";
 import {
-  hasAIModerationApiKey,
+  getEnvironmentAIModerationApiKey,
   moderateCommentText,
   normalizeChatBaseUrl,
 } from "./ai-moderation.server";
 import { getDb, hasDatabase } from "./db.server";
 import {
   comments,
+  commentSecrets,
   commentSettings,
   posts,
 } from "./schema.server";
+import {
+  decryptStoredSecret,
+  encryptStoredSecret,
+} from "./secret-storage.server";
 import type {
   AdminCommentRecord,
   CommentSettingsRecord,
@@ -51,22 +56,58 @@ function defaultCommentSettings(): CommentSettingsRecord {
   };
 }
 
-export async function getCommentSettings() {
+async function loadCommentConfiguration() {
   if (!hasDatabase()) {
     return {
       settings: defaultCommentSettings(),
-      apiKeyConfigured: hasAIModerationApiKey(),
+      storedApiKey: "",
+      storedKeyUnreadable: false,
     };
   }
-  const [saved] = await getDb()
-    .select()
-    .from(commentSettings)
-    .where(eq(commentSettings.id, "main"))
-    .limit(1);
+
+  const [[saved], [savedSecret]] = await Promise.all([
+    getDb()
+      .select()
+      .from(commentSettings)
+      .where(eq(commentSettings.id, "main"))
+      .limit(1),
+    getDb()
+      .select({ ciphertext: commentSecrets.apiKeyCiphertext })
+      .from(commentSecrets)
+      .where(eq(commentSecrets.id, "main"))
+      .limit(1),
+  ]);
+  let storedApiKey = "";
+  let storedKeyUnreadable = false;
+  if (savedSecret?.ciphertext) {
+    try {
+      storedApiKey = decryptStoredSecret(savedSecret.ciphertext);
+    } catch {
+      storedKeyUnreadable = true;
+    }
+  }
+
   return {
     settings: (saved as CommentSettingsRecord | undefined) ??
       defaultCommentSettings(),
-    apiKeyConfigured: hasAIModerationApiKey(),
+    storedApiKey,
+    storedKeyUnreadable,
+  };
+}
+
+export async function getCommentSettings() {
+  const loaded = await loadCommentConfiguration();
+  const environmentApiKey = getEnvironmentAIModerationApiKey();
+  const apiKeySource = loaded.storedApiKey
+    ? ("admin" as const)
+    : environmentApiKey
+      ? ("environment" as const)
+      : null;
+  return {
+    settings: loaded.settings,
+    apiKeyConfigured: Boolean(loaded.storedApiKey || environmentApiKey),
+    apiKeySource,
+    storedKeyUnreadable: loaded.storedKeyUnreadable,
   };
 }
 
@@ -75,6 +116,8 @@ export async function saveCommentSettings(input: {
   apiBaseUrl: string;
   model: string;
   extraPolicy: string;
+  apiKey?: string;
+  clearApiKey?: boolean;
 }) {
   if (!hasDatabase()) {
     throw new CommentMutationError("评论设置需要数据库。", 503);
@@ -92,29 +135,65 @@ export async function saveCommentSettings(input: {
   if (!model) {
     throw new CommentMutationError("模型名不能空着。");
   }
+  const apiKey = input.apiKey?.trim() ?? "";
+  if (apiKey.length > 2_048) {
+    throw new CommentMutationError("API Key 长得有点离谱，请检查后再填。");
+  }
+  if (apiKey && input.clearApiKey) {
+    throw new CommentMutationError("新密钥和清除密钥不能同时勾选。");
+  }
+  let apiKeyCiphertext = "";
+  try {
+    apiKeyCiphertext = apiKey ? encryptStoredSecret(apiKey) : "";
+  } catch (error) {
+    throw new CommentMutationError(
+      error instanceof Error ? error.message : "API Key 加密失败。",
+      503,
+    );
+  }
 
-  const [saved] = await getDb()
-    .insert(commentSettings)
-    .values({
-      id: "main",
-      aiEnabled: input.aiEnabled,
-      apiBaseUrl,
-      model,
-      extraPolicy: input.extraPolicy.trim().slice(0, 4_000),
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: commentSettings.id,
-      set: {
+  return getDb().transaction(async (tx) => {
+    const [saved] = await tx
+      .insert(commentSettings)
+      .values({
+        id: "main",
         aiEnabled: input.aiEnabled,
         apiBaseUrl,
         model,
         extraPolicy: input.extraPolicy.trim().slice(0, 4_000),
         updatedAt: new Date(),
-      },
-    })
-    .returning();
-  return saved;
+      })
+      .onConflictDoUpdate({
+        target: commentSettings.id,
+        set: {
+          aiEnabled: input.aiEnabled,
+          apiBaseUrl,
+          model,
+          extraPolicy: input.extraPolicy.trim().slice(0, 4_000),
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    if (apiKeyCiphertext) {
+      await tx
+        .insert(commentSecrets)
+        .values({
+          id: "main",
+          apiKeyCiphertext,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: commentSecrets.id,
+          set: { apiKeyCiphertext, updatedAt: new Date() },
+        });
+    } else if (input.clearApiKey) {
+      await tx
+        .delete(commentSecrets)
+        .where(eq(commentSecrets.id, "main"));
+    }
+    return saved;
+  });
 }
 
 function publicPostCondition(postId: string, now = new Date()) {
@@ -171,12 +250,14 @@ export async function listPublicComments(
 async function applyAIReview(
   comment: typeof comments.$inferSelect,
   settings: CommentSettingsRecord,
+  apiKey: string,
 ) {
   const checkedAt = new Date().toISOString();
   const result = await moderateCommentText({
     body: comment.body,
     authorId: comment.authorId,
     settings,
+    apiKey,
   });
   const nextStatus: CommentStatus = result.ok
     ? result.decision === "allow"
@@ -286,7 +367,10 @@ export async function createComment(input: {
     parentId = parent.parentId ?? parent.id;
   }
 
-  const { settings } = await getCommentSettings();
+  const loaded = await loadCommentConfiguration();
+  const settings = loaded.settings;
+  const apiKey =
+    loaded.storedApiKey || getEnvironmentAIModerationApiKey();
   const aiEnabled = settings.aiEnabled;
   const [saved] = await db
     .insert(comments)
@@ -313,14 +397,17 @@ export async function createComment(input: {
   if (!aiEnabled) {
     return { comment: saved, publication: "published" as const };
   }
-  return applyAIReview(saved, settings);
+  return applyAIReview(saved, settings, apiKey);
 }
 
 export async function recheckCommentWithAI(id: string) {
   if (!hasDatabase()) {
     throw new CommentMutationError("评论抽屉还没接上数据库。", 503);
   }
-  const { settings } = await getCommentSettings();
+  const loaded = await loadCommentConfiguration();
+  const settings = loaded.settings;
+  const apiKey =
+    loaded.storedApiKey || getEnvironmentAIModerationApiKey();
   if (!settings.aiEnabled) {
     throw new CommentMutationError("先打开 AI 审核开关再重新检查。", 409);
   }
@@ -347,7 +434,7 @@ export async function recheckCommentWithAI(id: string) {
     })
     .where(eq(comments.id, id))
     .returning();
-  return applyAIReview(checking, settings);
+  return applyAIReview(checking, settings, apiKey);
 }
 
 export async function deleteOwnComment(input: {

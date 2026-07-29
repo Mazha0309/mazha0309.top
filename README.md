@@ -154,7 +154,7 @@ GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
 ALLOWED_GITHUB_ID=99137842
 APP_HOST_PORT=3000
-# 可选；开启 AI 评论审核前填写
+# 可选回退；也可以直接在 /admin/comments 填写
 AI_MODERATION_API_KEY=...
 ```
 
@@ -182,10 +182,11 @@ sudo systemctl reload caddy
 评论使用站内 PostgreSQL 存储。访客通过 GitHub OAuth 登录后可以留言和回复，
 但只有 `ALLOWED_GITHUB_ID` 对应账号能进入后台。
 
-AI 审核默认关闭。若要启用，在 VPS `.env` 填写
-`AI_MODERATION_API_KEY`（也兼容 `OPENAI_API_KEY`），随后进入
-`/admin/comments` 设置开关、Chat API Base URL、模型和站点附加规则。
-API Key 只从服务端环境变量读取，后台不会显示或写进数据库与备份。
+AI 审核默认关闭。若要启用，直接进入 `/admin/comments` 填写 API Key
+并打开开关。密钥会使用由 `BETTER_AUTH_SECRET` 派生的 AES-256-GCM
+密钥加密保存，不回显，也不进入 CMS 备份。也可以使用
+`AI_MODERATION_API_KEY`（兼容 `OPENAI_API_KEY`）作为服务器环境变量回退。
+接口地址、模型和站点附加规则同样可以在后台修改。
 
 审核请求使用 OpenAI Chat Completions 兼容的 `/chat/completions` 协议。
 模型只有分类权，没有工具或数据库权限；评论作为 JSON 编码的不可信 user

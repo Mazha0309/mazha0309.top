@@ -82,6 +82,8 @@ export async function action({ request }: ActionFunctionArgs) {
         }),
         model: formString(form, "model", { required: true, max: 160 }),
         extraPolicy: formString(form, "extraPolicy", { max: 4_000 }),
+        apiKey: formString(form, "apiKey", { max: 2_049 }),
+        clearApiKey: form.get("clearApiKey") === "on",
       });
     } catch (error) {
       if (error instanceof CommentMutationError) {
@@ -248,6 +250,31 @@ export default function AdminComments({
             />
             <small>默认用适合高频小任务的 Luna，也可以填写兼容服务的模型名。</small>
           </label>
+          <label className="comment-ai-settings__secret">
+            <span>API KEY / 门卫钥匙</span>
+            <input
+              type="password"
+              name="apiKey"
+              maxLength={2_049}
+              autoComplete="new-password"
+              placeholder={
+                loaderData.moderationSettings.apiKeyConfigured
+                  ? "••••••••（留空就继续用原来的）"
+                  : "在这里贴入 API Key"
+              }
+            />
+            <small>
+              提交后使用 AES-256-GCM 加密保存，页面不会回显，也不会进入 CMS
+              备份；新填写的密钥会优先于服务器环境变量。
+            </small>
+          </label>
+          {loaderData.moderationSettings.apiKeySource === "admin" ? (
+            <label className="comment-ai-key-clear">
+              <input type="checkbox" name="clearApiKey" />
+              <span>清除后台保存的密钥</span>
+              <small>保存后会删除密文；若服务器环境变量里另有 key，会自动退回使用它。</small>
+            </label>
+          ) : null}
           <label className="comment-ai-settings__policy">
             <span>EXTRA SITE POLICY / 站点附加规则</span>
             <textarea
@@ -272,9 +299,13 @@ export default function AdminComments({
               }
             >
               <i />
-              {loaderData.moderationSettings.apiKeyConfigured
-                ? "API Key 已从服务器环境变量读到（页面不会显示明文）。"
-                : "还缺 AI_MODERATION_API_KEY；此时开启会安全地转入人工审核。"}
+              {loaderData.moderationSettings.storedKeyUnreadable
+                ? "以前保存的密钥无法解密，请在上面重新填一次。"
+                : loaderData.moderationSettings.apiKeySource === "admin"
+                  ? "后台密钥已经加密收好啦（页面永远不会显示明文）。"
+                  : loaderData.moderationSettings.apiKeySource === "environment"
+                    ? "当前使用服务器环境变量；在上面填入可改为后台管理。"
+                    : "还没有 API Key；此时开启会安全地转入人工审核。"}
             </p>
             <button
               className="button button--primary button--small"
@@ -294,7 +325,9 @@ export default function AdminComments({
             Schema，服务端还会再校验一次。任何超时、拒答、乱格式都不会放行。
           </p>
           <p>
-            没有提示词能保证绝对免疫，所以真正的兜底是“模型只能给建议，状态机决定能不能公开”。
+            默认会拦截广告引流、诈骗、纯攻击性垃圾话、露骨黄色废料和以操纵审核器为目的的注入；
+            正常吐槽、玩笑、技术争论与有上下文的项目链接尽量放行。没有提示词能保证绝对免疫，
+            所以真正的兜底是“模型只能给建议，状态机决定能不能公开”。
           </p>
         </details>
       </section>

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  AI_MODERATION_BASE_POLICY,
   moderateCommentText,
   normalizeChatBaseUrl,
 } from "../app/lib/ai-moderation.server";
@@ -28,7 +29,7 @@ afterEach(() => {
 
 describe("OpenAI-compatible comment moderation", () => {
   it("keeps hostile comment text in a separate untrusted user message", async () => {
-    process.env.AI_MODERATION_API_KEY = "test-only-key";
+    process.env.AI_MODERATION_API_KEY = "environment-test-key";
     const fetchMock = vi.fn(
       async (_input: string | URL | Request, _init?: RequestInit) =>
         Response.json({
@@ -54,6 +55,7 @@ describe("OpenAI-compatible comment moderation", () => {
       body: hostile,
       authorId: "visitor-123",
       settings,
+      apiKey: "admin-saved-test-key",
     });
 
     expect(result).toMatchObject({ ok: true, decision: "review" });
@@ -79,6 +81,10 @@ describe("OpenAI-compatible comment moderation", () => {
     });
     expect(payload.store).toBe(false);
     expect(payload.safety_identifier).toMatch(/^commenter_[0-9a-f]{32}$/u);
+    expect(new Headers(request?.headers).get("authorization")).toBe(
+      "Bearer admin-saved-test-key",
+    );
+    expect(payload.messages[0]!.content).not.toContain(hostile);
   });
 
   it("fails closed when the endpoint returns malformed output", async () => {
@@ -95,6 +101,13 @@ describe("OpenAI-compatible comment moderation", () => {
       settings,
     });
     expect(result).toMatchObject({ ok: false });
+  });
+
+  it("ships a default policy for injection, ads, abuse, and sexual waste", () => {
+    expect(AI_MODERATION_BASE_POLICY).toContain("prompt-injection");
+    expect(AI_MODERATION_BASE_POLICY).toContain("unsolicited ads");
+    expect(AI_MODERATION_BASE_POLICY).toContain("targeted degrading abuse");
+    expect(AI_MODERATION_BASE_POLICY).toContain("pornographic descriptions");
   });
 });
 

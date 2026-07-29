@@ -4317,6 +4317,7 @@ img {
 
 .comment-ai-settings__form input[type="url"],
 .comment-ai-settings__form input[type="text"],
+.comment-ai-settings__form input[type="password"],
 .comment-ai-settings__form textarea {
   width: 100%;
   max-width: 100%;
@@ -4402,6 +4403,40 @@ img {
 
 .comment-ai-settings__policy {
   grid-column: 1 / -1;
+}
+
+.comment-ai-settings__secret {
+  grid-column: 1 / -1;
+}
+
+.comment-ai-key-clear {
+  display: flex !important;
+  grid-column: 1 / -1;
+  align-items: center !important;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.55rem !important;
+  padding: 0.65rem 0.8rem;
+  border: 1.5px dashed color-mix(in srgb, var(--danger) 58%, var(--ink));
+  border-radius: 8px 14px 7px 12px;
+  background: color-mix(in srgb, var(--pink-soft) 45%, var(--paper-raised));
+}
+
+.comment-ai-key-clear input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--danger);
+}
+
+.comment-ai-key-clear span {
+  color: var(--danger);
+  font-family: var(--font-body) !important;
+  font-size: 0.76rem !important;
+  font-weight: 800 !important;
+}
+
+.comment-ai-key-clear small {
+  width: 100%;
+  padding-left: 1.9rem;
 }
 
 .comment-ai-settings__foot {
@@ -4709,6 +4744,8 @@ img {
   }
 
   .comment-ai-settings__policy,
+  .comment-ai-settings__secret,
+  .comment-ai-key-clear,
   .comment-ai-toggle,
   .comment-ai-settings__foot {
     grid-column: auto;
