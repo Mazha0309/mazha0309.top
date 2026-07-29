@@ -64,9 +64,16 @@ jobs:
           USER: ${{ secrets.VPS_USER }}
           DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
         run: |
-          ssh "$USER@$HOST" "mkdir -p '$DEPLOY_PATH/scripts'"
-          scp compose.yaml "$USER@$HOST:$DEPLOY_PATH/compose.yaml"
-          scp scripts/deploy-vps.sh "$USER@$HOST:$DEPLOY_PATH/scripts/deploy-vps.sh"
+          ssh_options=(
+            -o BatchMode=yes
+            -o ConnectTimeout=20
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=20
+          )
+          ssh "${ssh_options[@]}" "$USER@$HOST" "mkdir -p '$DEPLOY_PATH/scripts'"
+          scp "${ssh_options[@]}" compose.yaml "$USER@$HOST:$DEPLOY_PATH/compose.yaml"
+          scp "${ssh_options[@]}" scripts/deploy-vps.sh "$USER@$HOST:$DEPLOY_PATH/scripts/deploy-vps.sh"
       - name: Migrate, restart, and verify
         env:
           HOST: ${{ secrets.VPS_HOST }}
@@ -74,4 +81,11 @@ jobs:
           DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
           IMAGE: ${{ needs.image.outputs.image }}
         run: |
-          ssh "$USER@$HOST" "cd '$DEPLOY_PATH' && chmod +x scripts/deploy-vps.sh && scripts/deploy-vps.sh '$IMAGE'"
+          ssh_options=(
+            -o BatchMode=yes
+            -o ConnectTimeout=20
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=20
+          )
+          ssh "${ssh_options[@]}" "$USER@$HOST" "cd '$DEPLOY_PATH' && chmod +x scripts/deploy-vps.sh && scripts/deploy-vps.sh '$IMAGE'"

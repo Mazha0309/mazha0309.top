@@ -15,6 +15,45 @@ fi
 export APP_IMAGE="$image"
 docker compose config --quiet
 
+echo "Cleaning up stale deployment one-off containers"
+mapfile -t stale_oneoffs < <(
+  docker ps -aq \
+    --filter "label=com.docker.compose.project=mazha-home" \
+    --filter "label=com.docker.compose.oneoff=True"
+)
+if ((${#stale_oneoffs[@]} > 0)); then
+  docker rm -f "${stale_oneoffs[@]}" >/dev/null
+fi
+
+active_oneoff=""
+cleanup_active_oneoff() {
+  if [[ -n "$active_oneoff" ]]; then
+    docker rm -f "$active_oneoff" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup_active_oneoff EXIT
+
+run_app_oneoff() {
+  local name="$1"
+  shift
+  docker rm -f "$name" >/dev/null 2>&1 || true
+  active_oneoff="$name"
+  if ! timeout --foreground --signal=TERM --kill-after=15s 180s \
+    docker compose run \
+      --rm \
+      --name "$name" \
+      --no-deps \
+      -e PGCONNECT_TIMEOUT=10 \
+      app "$@"; then
+    echo "One-off task failed or exceeded 180 seconds: $name" >&2
+    docker rm -f "$name" >/dev/null 2>&1 || true
+    active_oneoff=""
+    docker compose logs --tail=120 postgres >&2 || true
+    return 1
+  fi
+  active_oneoff=""
+}
+
 container_id="$(docker compose ps -q app 2>/dev/null || true)"
 previous_image=""
 if [[ -n "$container_id" ]]; then
@@ -45,8 +84,8 @@ if [[ "$database_ready" != true ]]; then
 fi
 
 echo "Applying forward-only database migrations"
-docker compose run --rm --no-deps app npm run db:migrate
-docker compose run --rm --no-deps app npm run db:seed
+run_app_oneoff mazha-home-migrate npm run db:migrate
+run_app_oneoff mazha-home-seed npm run db:seed
 
 echo "Starting the new application container"
 docker compose up -d --no-build app postgres
