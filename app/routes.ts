@@ -28,6 +28,7 @@ export default [
     route("posts", "routes/admin-posts.tsx"),
     route("posts/:id", "routes/admin-post-editor.tsx"),
     route("posts/:id/preview", "routes/admin-post-preview.tsx"),
+    route("comments", "routes/admin-comments.tsx"),
     route("projects", "routes/admin-projects.tsx"),
     route("friends", "routes/admin-friends.tsx"),
     route("pages", "routes/admin-pages.tsx"),

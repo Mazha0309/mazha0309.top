@@ -12,6 +12,7 @@ import {
 import { getDb, getPool, hasDatabase } from "./db.server";
 import {
   analyticsDaily,
+  comments,
   contentLinks,
   friendLinks,
   media,
@@ -721,11 +722,15 @@ export async function getAdminDashboardTotals() {
       trackedPaths: 0,
       firstTrackedDay: null as string | null,
       revisions: 0,
+      comments: 0,
+      commentsActive: 0,
+      commentsPending: 0,
+      commentAuthors: 0,
     };
   }
 
   const db = getDb();
-  const [analyticsRows, revisionRows] = await Promise.all([
+  const [analyticsRows, revisionRows, commentRows] = await Promise.all([
     db
       .select({
         views: sql<number>`coalesce(sum(${analyticsDaily.views}), 0)::bigint`,
@@ -739,6 +744,14 @@ export async function getAdminDashboardTotals() {
         revisions: sql<number>`count(*)::int`,
       })
       .from(postRevisions),
+    db
+      .select({
+        comments: sql<number>`count(*)::int`,
+        active: sql<number>`count(*) filter (where ${comments.status} = 'active')::int`,
+        pending: sql<number>`count(*) filter (where ${comments.status} in ('pending', 'rejected'))::int`,
+        authors: sql<number>`count(distinct ${comments.authorId})::int`,
+      })
+      .from(comments),
   ]);
 
   return {
@@ -747,6 +760,10 @@ export async function getAdminDashboardTotals() {
     trackedPaths: Number(analyticsRows[0]?.trackedPaths ?? 0),
     firstTrackedDay: analyticsRows[0]?.firstTrackedDay ?? null,
     revisions: Number(revisionRows[0]?.revisions ?? 0),
+    comments: Number(commentRows[0]?.comments ?? 0),
+    commentsActive: Number(commentRows[0]?.active ?? 0),
+    commentsPending: Number(commentRows[0]?.pending ?? 0),
+    commentAuthors: Number(commentRows[0]?.authors ?? 0),
   };
 }
 

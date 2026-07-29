@@ -155,6 +155,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
       views7,
       views30,
       viewsToday: dayTotals.get(today.toISOString().slice(0, 10)) ?? 0,
+      comments: lifetime.comments,
+      commentsActive: lifetime.commentsActive,
+      commentsPending: lifetime.commentsPending,
+      commentAuthors: lifetime.commentAuthors,
     },
     traffic: {
       yesterday: sixtyDays.at(-2)?.views ?? 0,
@@ -282,6 +286,13 @@ export default function AdminDashboard({
           <strong>{formatCount(loaderData.counts.viewsLifetime)}</strong>
           <small>今天 {loaderData.counts.viewsToday} · 7 天 {loaderData.counts.views7} · 30 天 {loaderData.counts.views30}</small>
         </article>
+        <article>
+          <span>PAPER MAIL / 留言纸条</span>
+          <strong>{loaderData.counts.comments}</strong>
+          <small>
+            {loaderData.counts.commentsActive} 公开 · {loaderData.counts.commentsPending} 待你看 · {loaderData.counts.commentAuthors} 位路人
+          </small>
+        </article>
       </div>
 
       <div className="admin-dashboard-grid admin-dashboard-grid--analytics">
@@ -385,6 +396,8 @@ export default function AdminDashboard({
               <div><dt>首页精选</dt><dd>{loaderData.writing.featured}</dd></div>
               <div><dt>7 天内碰过</dt><dd>{loaderData.writing.updated7}</dd></div>
               <div><dt>历史版本</dt><dd>{formatCount(loaderData.writing.revisions)}</dd></div>
+              <div><dt>留言纸条</dt><dd>{formatCount(loaderData.counts.comments)}</dd></div>
+              <div><dt>留言者</dt><dd>{formatCount(loaderData.counts.commentAuthors)}</dd></div>
             </dl>
             <div className="stats-ledger__chips" aria-label="常用文章标签">
               {loaderData.writing.topTags.length
@@ -492,6 +505,7 @@ export default function AdminDashboard({
             <Link to="/admin/projects"><span>◇</span><strong>摆弄项目罐头</strong><small>排序、状态与展示卡片</small></Link>
             <Link to="/admin/friends"><span>♡</span><strong>请新邻居进门</strong><small>名片、头像与公开状态</small></Link>
             <Link to="/admin/media"><span>▧</span><strong>往图片口袋里塞</strong><small>自动生成 WebP / AVIF</small></Link>
+            <Link to="/admin/comments"><span>◌</span><strong>去留言值班室</strong><small>{loaderData.counts.commentsPending ? `${loaderData.counts.commentsPending} 张等你拿主意` : "待审抽屉很安静"}</small></Link>
           </section>
         </div>
 

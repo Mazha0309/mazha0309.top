@@ -88,6 +88,67 @@ export interface PostRecord extends PostSummary {
   contentText: string;
 }
 
+export type CommentStatus =
+  | "active"
+  | "pending"
+  | "rejected"
+  | "hidden"
+  | "deleted";
+
+export type AIModerationDecision = "allow" | "review" | "block";
+
+export interface CommentModerationSnapshot {
+  mode?: "disabled" | "ai";
+  state?: "checking" | "complete" | "error";
+  decision?: AIModerationDecision;
+  reason?: string;
+  categories?: string[];
+  confidence?: number;
+  model?: string;
+  checkedAt?: string;
+  error?: string;
+}
+
+export interface CommentSettingsRecord {
+  id: string;
+  aiEnabled: boolean;
+  apiBaseUrl: string;
+  model: string;
+  extraPolicy: string;
+  updatedAt?: Date | string;
+}
+
+export interface CommentRecord {
+  id: string;
+  postId: string;
+  parentId?: string | null;
+  authorId: string;
+  authorGithubId?: string | null;
+  authorName: string;
+  authorAvatarUrl?: string | null;
+  body: string;
+  status: CommentStatus;
+  moderation: CommentModerationSnapshot;
+  moderatedBy?: string | null;
+  moderatedAt?: Date | string | null;
+  publishedAt?: Date | string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface PublicCommentRecord extends CommentRecord {
+  isOwner: boolean;
+}
+
+export interface CommentThread extends PublicCommentRecord {
+  replies: PublicCommentRecord[];
+}
+
+export interface AdminCommentRecord extends CommentRecord {
+  postTitle: string;
+  postSlug: string;
+}
+
 export interface ProjectRecord {
   id: string;
   slug: string;

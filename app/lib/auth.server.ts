@@ -1,5 +1,4 @@
 import { betterAuth } from "better-auth";
-import { APIError } from "better-auth/api";
 import { Pool } from "pg";
 import { hasDatabase } from "./db.server";
 
@@ -72,35 +71,9 @@ export const auth = betterAuth({
       },
     },
   },
-  databaseHooks: {
-    user: {
-      create: {
-        before: async (user) => {
-          const githubId = (user as typeof user & { githubId?: string }).githubId;
-          if (githubId !== allowedGitHubId) {
-            throw new APIError("FORBIDDEN", {
-              message: "这个控制台只认一只指定的 GitHub 账号。",
-            });
-          }
-          return { data: user };
-        },
-      },
-      update: {
-        before: async (user) => {
-          const githubId = (user as typeof user & { githubId?: string }).githubId;
-          if (githubId && githubId !== allowedGitHubId) {
-            throw new APIError("FORBIDDEN", {
-              message: "GitHub 身份与站点管理员不匹配。",
-            });
-          }
-          return { data: user };
-        },
-      },
-    },
-  },
 });
 
-export async function getAdminSession(request: Request) {
+export async function getSession(request: Request) {
   if (isDevelopmentBypass) {
     return {
       session: {
@@ -119,11 +92,21 @@ export async function getAdminSession(request: Request) {
   }
 
   if (!hasDatabase()) return null;
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) return null;
+  return auth.api.getSession({ headers: request.headers });
+}
+
+export function isAdminSession(
+  session: Awaited<ReturnType<typeof getSession>>,
+) {
+  if (!session) return false;
   const githubId = (session.user as typeof session.user & { githubId?: string })
     .githubId;
-  return githubId === allowedGitHubId ? session : null;
+  return githubId === allowedGitHubId;
+}
+
+export async function getAdminSession(request: Request) {
+  const session = await getSession(request);
+  return isAdminSession(session) ? session : null;
 }
 
 export async function requireAdmin(request: Request) {

@@ -13,7 +13,7 @@ import stylesheet from "./styles/global.css?url";
 import articleStylesheet from "./styles/article.css?url";
 import { getSiteShell } from "./lib/content.server";
 import { SearchPalette } from "./components/search-palette";
-import { getAdminSession } from "./lib/auth.server";
+import { getSession, isAdminSession } from "./lib/auth.server";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
@@ -43,11 +43,20 @@ export function headers() {
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const [shell, adminSession] = await Promise.all([
+  const [shell, session] = await Promise.all([
     getSiteShell(),
-    getAdminSession(request),
+    getSession(request),
   ]);
-  return { ...shell, isAdmin: Boolean(adminSession) };
+  return {
+    ...shell,
+    isAdmin: isAdminSession(session),
+    viewer: session
+      ? {
+          name: session.user.name || "GitHub 路人",
+          image: session.user.image,
+        }
+      : null,
+  };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -92,7 +101,7 @@ function Brand({
 }
 
 export default function App() {
-  const { profile, links, isAdmin } = useLoaderData<typeof loader>();
+  const { profile, links, isAdmin, viewer } = useLoaderData<typeof loader>();
   const customization = profile.customization;
   const navigation = links.filter((link) => link.kind === "nav" && link.url);
   const socials = links.filter((link) => link.kind === "social" && link.url);
@@ -130,6 +139,19 @@ export default function App() {
               <span aria-hidden="true">✎</span>
               <span className="tool-button__text">ADMIN</span>
             </NavLink>
+          ) : viewer ? (
+            <span
+              className="tool-button viewer-tool-button"
+              aria-label={`已使用 GitHub 登录：${viewer.name}`}
+              title={viewer.name}
+            >
+              {viewer.image ? (
+                <img src={viewer.image} alt="" referrerPolicy="no-referrer" />
+              ) : (
+                <span aria-hidden="true">✓</span>
+              )}
+              <span className="tool-button__text">SIGNED</span>
+            </span>
           ) : (
             <NavLink
               className="tool-button login-tool-button"

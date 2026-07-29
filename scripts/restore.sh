@@ -37,7 +37,7 @@ compose=(docker compose -f "$compose_file")
   --username "$postgres_user" \
   --dbname "$postgres_db" \
   --set ON_ERROR_STOP=1 \
-  --command "truncate table public.post_revisions, public.post_slugs, public.posts, public.projects, public.friend_links, public.pages, public.content_links, public.site_profiles, public.media cascade"
+  --command "truncate table public.comments, public.comment_settings, public.post_revisions, public.post_slugs, public.posts, public.projects, public.friend_links, public.pages, public.content_links, public.site_profiles, public.media cascade"
 
 "${compose[@]}" exec -T postgres pg_restore \
   --username "$postgres_user" \
