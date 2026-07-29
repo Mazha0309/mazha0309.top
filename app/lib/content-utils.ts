@@ -14,6 +14,10 @@ export function splitTags(value: string | string[]) {
   return [...new Set(source.map((tag) => tag.trim()).filter(Boolean))].slice(0, 12);
 }
 
+export function normalizeTextLineBreaks(value: string) {
+  return value.replace(/\r\n?/g, "\n").replace(/\\n[ \t]*/g, "\n");
+}
+
 export function mdxToText(value: string) {
   return value
     .replace(/```[\s\S]*?```/g, " ")

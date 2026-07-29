@@ -4,6 +4,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { AdminLinkEditor } from "../components/admin-link-editor";
 import { getSiteSettings, saveSiteSettings } from "../lib/content.server";
 import { requireAdmin } from "../lib/auth.server";
+import { normalizeTextLineBreaks } from "../lib/content-utils";
 import { deleteStoredImage, storeImage } from "../lib/media.server";
 import { formString, requireSameOrigin } from "../lib/security.server";
 import {
@@ -108,6 +109,9 @@ export async function action({ request }: ActionFunctionArgs) {
     if (!isAllowedImageUrl(avatarUrl)) {
       throw new Error("头像地址只允许站内路径或 HTTP(S) 图片。");
     }
+    const heroTitle = normalizeTextLineBreaks(
+      formString(form, "heroTitle", { required: true, max: 160 }),
+    );
 
     await saveSiteSettings(
       {
@@ -115,7 +119,7 @@ export async function action({ request }: ActionFunctionArgs) {
         displayName,
         handle: formString(form, "handle", { max: 80 }),
         heroEyebrow: formString(form, "heroEyebrow", { max: 120 }),
-        heroTitle: formString(form, "heroTitle", { required: true, max: 160 }),
+        heroTitle,
         heroIntro: formString(form, "heroIntro", { max: 500 }),
         bio: formString(form, "bio", { max: 500 }),
         avatarUrl,
@@ -131,6 +135,7 @@ export async function action({ request }: ActionFunctionArgs) {
       message: uploadedAvatarId
         ? "新头像已经贴好，站点外观与链接也一起保存啦。"
         : "站点外观、首页文案与链接都保存好了。",
+      heroTitle,
       savedAt: Date.now(),
     };
   } catch (error) {
@@ -346,7 +351,24 @@ export default function AdminSettings({
           <div className="form-grid">
             <label className="field field--wide"><span>Hero 眉题</span><input name="heroEyebrow" defaultValue={profile.heroEyebrow} /></label>
             <label className="field field--wide"><span>Hero 招呼</span><input name="heroKicker" defaultValue={customization.heroKicker} /></label>
-            <label className="field field--wide"><span>Hero 主标题</span><input name="heroTitle" defaultValue={profile.heroTitle} required /></label>
+            <label className="field field--wide hero-title-field">
+              <span>
+                Hero 主标题
+                <small>
+                  回车换行，也兼容 <code>{"\\n"}</code>
+                </small>
+              </span>
+              <textarea
+                key={actionData?.ok ? actionData.savedAt : "hero-title"}
+                name="heroTitle"
+                rows={2}
+                maxLength={160}
+                defaultValue={
+                  actionData?.ok ? actionData.heroTitle : profile.heroTitle
+                }
+                required
+              />
+            </label>
             <label className="field field--wide"><span>Hero 简介</span><textarea name="heroIntro" rows={3} defaultValue={profile.heroIntro} /></label>
             <label className="field"><span>主按钮文字</span><input name="primaryActionLabel" defaultValue={customization.primaryActionLabel} /></label>
             <label className="field"><span>主按钮地址</span><input name="primaryActionUrl" defaultValue={customization.primaryActionUrl} /></label>

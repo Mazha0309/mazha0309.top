@@ -478,6 +478,7 @@ img {
   line-height: 0.96;
   letter-spacing: 0.005em;
   text-wrap: balance;
+  white-space: pre-line;
 }
 
 .hero-copy {
@@ -2057,6 +2058,27 @@ img {
 .field textarea {
   resize: vertical;
   line-height: 1.55;
+}
+
+.hero-title-field textarea {
+  min-height: 5.4rem;
+  border-left: 5px solid var(--pink);
+  background:
+    linear-gradient(
+      to bottom,
+      transparent calc(1.45em - 1px),
+      color-mix(in srgb, var(--blue) 30%, transparent) 1.45em
+    );
+  background-color: var(--paper-raised);
+  background-size: 100% 1.45em;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  line-height: 1.45;
+}
+
+.hero-title-field code {
+  font-family: var(--font-system);
+  font-size: 0.95em;
 }
 
 .check-field {
