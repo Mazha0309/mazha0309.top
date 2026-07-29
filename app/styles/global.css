@@ -2060,6 +2060,73 @@ img {
   line-height: 1.55;
 }
 
+.slug-field__meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+  padding-top: 0.18rem;
+  border-bottom: 1px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.slug-field__label {
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.slug-field__label small {
+  margin-left: 0.35rem;
+  color: var(--ink-muted);
+  font-family: var(--font-system);
+  font-size: 0.52rem;
+}
+
+.slug-field__meta code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-family: var(--font-system);
+  font-size: 0.55rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slug-mode {
+  flex: 0 0 auto;
+  padding: 0.18rem 0.42rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--font-system);
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.slug-mode--auto {
+  background: var(--mint);
+}
+
+.slug-mode--manual {
+  background: var(--yellow);
+}
+
+.slug-field__reset {
+  min-height: 38px;
+  margin-left: auto;
+  padding: 0.2rem 0;
+  cursor: pointer;
+  border: 0;
+  color: var(--pink-dark);
+  background: transparent;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+}
+
 .hero-title-field textarea {
   min-height: 5.4rem;
   border-left: 5px solid var(--pink);
