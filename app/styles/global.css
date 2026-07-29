@@ -5552,6 +5552,8 @@ img {
 }
 
 .floating-music__current-lyric {
+  display: grid;
+  gap: 0.16rem;
   min-height: 3.4rem;
   margin: 0.85rem 0 0.45rem;
   padding: 0.45rem 0.55rem;
@@ -5562,10 +5564,16 @@ img {
   text-wrap: balance;
 }
 
-.floating-music__current-lyric::before,
-.floating-music__current-lyric::after {
+.floating-music__current-original > span {
   color: var(--pink);
-  content: "～";
+}
+
+.floating-music__current-lyric small {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .floating-music__progress {
@@ -5622,6 +5630,36 @@ img {
   height: 50px;
   color: white;
   background: var(--pink);
+}
+
+.floating-music__mode {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  margin: -0.28rem auto 0.62rem;
+  padding: 0.28rem 0.72rem;
+  cursor: pointer;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 52% 48% 46% 54% / 58% 51% 49% 42%;
+  background: var(--paper);
+  box-shadow: 2px 3px 0 var(--ink);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.floating-music__mode span {
+  color: var(--pink);
+  font-family: var(--font-system);
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.floating-music__mode:active {
+  box-shadow: none;
+  transform: translate(2px, 3px);
 }
 
 .floating-music__error {
@@ -5685,6 +5723,18 @@ img {
   cursor: pointer;
 }
 
+.floating-music__lyric-original,
+.floating-music__lyric-translation {
+  display: block;
+}
+
+.floating-music__lyric-translation {
+  margin-top: 0.15rem;
+  font-size: 0.62rem;
+  font-weight: 650;
+  opacity: 0.82;
+}
+
 .floating-music__lyrics button:hover {
   color: var(--ink);
 }
@@ -5699,6 +5749,11 @@ img {
     );
   font-size: 0.84rem;
   font-weight: 900;
+}
+
+.floating-music__lyrics button.is-active .floating-music__lyric-translation {
+  font-size: 0.68rem;
+  opacity: 1;
 }
 
 .floating-music__lyrics .floating-music__empty {

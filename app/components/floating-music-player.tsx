@@ -6,10 +6,19 @@ import {
   type ChangeEvent,
 } from "react";
 import { activeLyricIndex, parseLyrics } from "../lib/lyrics";
+import {
+  PLAYBACK_MODE_LABELS,
+  PLAYBACK_MODE_MARKS,
+  isPlaybackMode,
+  nextPlaybackIndex,
+  nextPlaybackMode,
+  type PlaybackMode,
+} from "../lib/music-playback";
 import type { MusicTrackRecord } from "../lib/types";
 
 const CURRENT_TRACK_KEY = "mazha-music-current-track";
 const TRACK_PROGRESS_PREFIX = "mazha-music-progress:";
+const PLAYBACK_MODE_KEY = "mazha-music-playback-mode";
 
 function formatTime(value: number) {
   if (!Number.isFinite(value) || value < 0) return "0:00";
@@ -59,6 +68,7 @@ export function FloatingMusicPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState("");
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>("list");
 
   const currentIndex = Math.max(
     0,
@@ -73,8 +83,14 @@ export function FloatingMusicPlayer({
     ? activeLyricIndex(parsedLyrics.lines, currentTime)
     : -1;
   const currentLyric = parsedLyrics.timed
-    ? parsedLyrics.lines[activeIndex]?.text ?? "前奏正慢吞吞地走过来…"
-    : parsedLyrics.lines[0]?.text ?? "这首歌还没有贴歌词纸条。";
+    ? parsedLyrics.lines[activeIndex] ?? {
+        text: "前奏正慢吞吞地走过来…",
+        translations: [],
+      }
+    : parsedLyrics.lines[0] ?? {
+        text: "这首歌还没有贴歌词纸条。",
+        translations: [],
+      };
 
   useEffect(() => {
     try {
@@ -82,6 +98,8 @@ export function FloatingMusicPlayer({
       if (savedId && tracks.some((candidate) => candidate.id === savedId)) {
         setCurrentTrackId(savedId);
       }
+      const savedMode = window.localStorage.getItem(PLAYBACK_MODE_KEY);
+      if (isPlaybackMode(savedMode)) setPlaybackMode(savedMode);
     } catch {
       // Storage is only a convenience.
     }
@@ -226,7 +244,37 @@ export function FloatingMusicPlayer({
   }
 
   function nextTrack() {
-    selectTrack(currentIndex + 1, playing);
+    const manualMode = playbackMode === "single" ? "list" : playbackMode;
+    selectTrack(
+      nextPlaybackIndex(manualMode, currentIndex, tracks.length),
+      playing,
+    );
+  }
+
+  function handleTrackEnded() {
+    if (playbackMode === "single") {
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.currentTime = 0;
+      setCurrentTime(0);
+      saveTrackState(track.id, 0);
+      void play();
+      return;
+    }
+    selectTrack(
+      nextPlaybackIndex(playbackMode, currentIndex, tracks.length),
+      true,
+    );
+  }
+
+  function cyclePlaybackMode() {
+    const nextMode = nextPlaybackMode(playbackMode);
+    setPlaybackMode(nextMode);
+    try {
+      window.localStorage.setItem(PLAYBACK_MODE_KEY, nextMode);
+    } catch {
+      // The mode still works for this page visit when storage is unavailable.
+    }
   }
 
   return (
@@ -263,7 +311,14 @@ export function FloatingMusicPlayer({
           </header>
 
           <p className="floating-music__current-lyric" aria-live="polite">
-            {currentLyric}
+            <span className="floating-music__current-original">
+              <span aria-hidden="true">～</span>
+              {currentLyric.text}
+              <span aria-hidden="true">～</span>
+            </span>
+            {currentLyric.translations.map((translation, index) => (
+              <small key={`${translation}-${index}`}>{translation}</small>
+            ))}
           </p>
 
           <div className="floating-music__progress">
@@ -298,6 +353,16 @@ export function FloatingMusicPlayer({
               <span aria-hidden="true">↷</span>
             </button>
           </div>
+
+          <button
+            className="floating-music__mode"
+            type="button"
+            onClick={cyclePlaybackMode}
+            aria-label={`播放模式：${PLAYBACK_MODE_LABELS[playbackMode]}；点击切换`}
+          >
+            <span aria-hidden="true">{PLAYBACK_MODE_MARKS[playbackMode]}</span>
+            {PLAYBACK_MODE_LABELS[playbackMode]}
+          </button>
 
           {error ? <p className="floating-music__error">{error}</p> : null}
 
@@ -343,7 +408,17 @@ export function FloatingMusicPlayer({
                         setCurrentTime(line.time);
                       }}
                     >
-                      {line.text}
+                      <span className="floating-music__lyric-original">
+                        {line.text}
+                      </span>
+                      {line.translations.map((translation, translationIndex) => (
+                        <small
+                          className="floating-music__lyric-translation"
+                          key={`${translation}-${translationIndex}`}
+                        >
+                          {translation}
+                        </small>
+                      ))}
                     </button>
                   ) : (
                     <p
@@ -408,7 +483,7 @@ export function FloatingMusicPlayer({
             saveTrackState(loadedTrackIdRef.current, audio.currentTime);
           }
         }}
-        onEnded={() => selectTrack(currentIndex + 1, true)}
+        onEnded={handleTrackEnded}
         onError={() => {
           setPlaying(false);
           setError("这首歌的纸带读不出来，检查一下地址或文件格式吧。");

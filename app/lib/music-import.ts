@@ -47,3 +47,31 @@ export function formatMusicFileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+export async function fingerprintMusicFile(file: Blob) {
+  const digest = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    await file.arrayBuffer(),
+  );
+  return Array.from(
+    new Uint8Array(digest),
+    (byte) => byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+export function formatMusicTransferRate(bytesPerSecond: number) {
+  if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) return "";
+  if (bytesPerSecond < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytesPerSecond / 1024))} KB/s`;
+  }
+  return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
+}
+
+export function formatMusicRemainingTime(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "不到 1 分钟";
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  if (minutes < 60) return `约 ${minutes} 分钟`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes ? `约 ${hours} 小时 ${remainingMinutes} 分` : `约 ${hours} 小时`;
+}
