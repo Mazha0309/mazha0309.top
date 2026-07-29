@@ -1,11 +1,14 @@
+import { useEffect, useRef, useState } from "react";
 import { Form, useActionData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { AdminLinkEditor } from "../components/admin-link-editor";
 import { getSiteSettings, saveSiteSettings } from "../lib/content.server";
 import { requireAdmin } from "../lib/auth.server";
+import { deleteStoredImage, storeImage } from "../lib/media.server";
 import { formString, requireSameOrigin } from "../lib/security.server";
 import {
   isAllowedDisplayUrl,
+  isAllowedImageUrl,
   normalizeSiteCustomization,
 } from "../lib/site-customization";
 import type { ContentLink, SiteAccent } from "../lib/types";
@@ -21,6 +24,7 @@ export async function action({ request }: ActionFunctionArgs) {
   await requireAdmin(request);
   requireSameOrigin(request);
   const form = await request.formData();
+  let uploadedAvatarId: string | null = null;
   try {
     const rawLinks = JSON.parse(formString(form, "linksJson")) as unknown;
     if (!Array.isArray(rawLinks)) throw new Error("链接配置格式不对，请刷新页面后重试。");
@@ -86,16 +90,35 @@ export async function action({ request }: ActionFunctionArgs) {
       if (!isAllowedDisplayUrl(url)) throw new Error(`${label}地址格式不安全。`);
     }
 
+    const displayName = formString(form, "displayName", {
+      required: true,
+      max: 80,
+    });
+    let avatarUrl = formString(form, "avatarUrl", { max: 600 });
+    const avatarFile = form.get("avatarFile");
+    if (avatarFile instanceof File && avatarFile.size > 0) {
+      const uploadedAvatar = await storeImage(
+        avatarFile,
+        `${displayName} 的头像`,
+      );
+      uploadedAvatarId = uploadedAvatar.id;
+      avatarUrl =
+        uploadedAvatar.variants.webp ?? uploadedAvatar.variants.original;
+    }
+    if (!isAllowedImageUrl(avatarUrl)) {
+      throw new Error("头像地址只允许站内路径或 HTTP(S) 图片。");
+    }
+
     await saveSiteSettings(
       {
         id: "main",
-        displayName: formString(form, "displayName", { required: true, max: 80 }),
+        displayName,
         handle: formString(form, "handle", { max: 80 }),
         heroEyebrow: formString(form, "heroEyebrow", { max: 120 }),
         heroTitle: formString(form, "heroTitle", { required: true, max: 160 }),
         heroIntro: formString(form, "heroIntro", { max: 500 }),
         bio: formString(form, "bio", { max: 500 }),
-        avatarUrl: formString(form, "avatarUrl", { max: 600 }),
+        avatarUrl,
         location: formString(form, "location", { max: 120 }),
         statusText: formString(form, "statusText", { max: 180 }),
         email: formString(form, "email", { max: 240 }),
@@ -103,8 +126,17 @@ export async function action({ request }: ActionFunctionArgs) {
       },
       links,
     );
-    return { ok: true, message: "站点外观、首页文案与链接都保存好了。" };
+    return {
+      ok: true,
+      message: uploadedAvatarId
+        ? "新头像已经贴好，站点外观与链接也一起保存啦。"
+        : "站点外观、首页文案与链接都保存好了。",
+      savedAt: Date.now(),
+    };
   } catch (error) {
+    if (uploadedAvatarId) {
+      await deleteStoredImage(uploadedAvatarId).catch(() => undefined);
+    }
     return { ok: false, error: error instanceof Error ? error.message : "保存失败。" };
   }
 }
@@ -123,6 +155,110 @@ function PanelHeading({
       <span className="micro-label">{eyebrow}</span>
       <h2>{title}</h2>
       <p>{description}</p>
+    </div>
+  );
+}
+
+function AvatarUploadField({
+  value,
+  savedAt,
+}: {
+  value: string;
+  savedAt?: number;
+}) {
+  const [avatarUrl, setAvatarUrl] = useState(value);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [fileName, setFileName] = useState("");
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const previewSource = filePreview ?? avatarUrl.trim();
+
+  useEffect(() => {
+    setAvatarUrl(value);
+  }, [value]);
+
+  useEffect(() => {
+    setPreviewFailed(false);
+    return () => {
+      if (filePreview) URL.revokeObjectURL(filePreview);
+    };
+  }, [filePreview, previewSource]);
+
+  useEffect(() => {
+    if (!savedAt) return;
+    if (fileInput.current) fileInput.current.value = "";
+    setFileName("");
+    setFilePreview(null);
+  }, [savedAt]);
+
+  function clearSelectedFile() {
+    if (fileInput.current) fileInput.current.value = "";
+    setFileName("");
+    setFilePreview(null);
+  }
+
+  return (
+    <div className="profile-avatar-editor field--wide">
+      <div className="profile-avatar-editor__preview">
+        {previewSource && !previewFailed ? (
+          <img
+            src={previewSource}
+            alt="头像预览"
+            onError={() => setPreviewFailed(true)}
+          />
+        ) : (
+          <span aria-live="polite">还没贴头像</span>
+        )}
+        <small>{filePreview ? "NEW / 待保存" : "AVATAR / 当前预览"}</small>
+      </div>
+      <div className="profile-avatar-editor__controls">
+        <label className="field">
+          <span>
+            头像地址 <small>URL / 可选兜底</small>
+          </span>
+          <input
+            name="avatarUrl"
+            type="text"
+            inputMode="url"
+            maxLength={600}
+            value={avatarUrl}
+            onChange={(event) => setAvatarUrl(event.currentTarget.value)}
+            placeholder="/media/... 或 https://..."
+          />
+        </label>
+        <label className="avatar-file-picker">
+          <input
+            ref={fileInput}
+            name="avatarFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            aria-describedby="avatar-upload-note"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (!file) {
+                clearSelectedFile();
+                return;
+              }
+              setFileName(file.name);
+              setFilePreview(URL.createObjectURL(file));
+            }}
+          />
+          <span>从设备里挑一张 ↗</span>
+          <output>{fileName || "PNG / JPEG / WEBP / GIF"}</output>
+        </label>
+        <div className="profile-avatar-editor__note" id="avatar-upload-note">
+          <p>最大 8 MB；保存时会自动生成 WebP 与 AVIF，文件会进入媒体抽屉。</p>
+          {fileName ? (
+            <button
+              className="text-button"
+              type="button"
+              onClick={clearSelectedFile}
+            >
+              撤回这次选择
+            </button>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -158,7 +294,11 @@ export default function AdminSettings({
         <a href="#links">链接</a>
       </nav>
 
-      <Form method="post" className="admin-settings-form">
+      <Form
+        method="post"
+        encType="multipart/form-data"
+        className="admin-settings-form"
+      >
         <section className="admin-panel settings-panel" id="identity">
           <PanelHeading
             eyebrow="01 / IDENTITY"
@@ -168,7 +308,10 @@ export default function AdminSettings({
           <div className="form-grid">
             <label className="field"><span>显示名</span><input name="displayName" defaultValue={profile.displayName} required /></label>
             <label className="field"><span>Handle</span><input name="handle" defaultValue={profile.handle} /></label>
-            <label className="field field--wide"><span>头像 URL</span><input name="avatarUrl" type="url" defaultValue={profile.avatarUrl} /></label>
+            <AvatarUploadField
+              value={profile.avatarUrl}
+              savedAt={actionData?.ok ? actionData.savedAt : undefined}
+            />
             <label className="field"><span>位置</span><input name="location" defaultValue={profile.location} /></label>
             <label className="field"><span>当前状态</span><input name="statusText" defaultValue={profile.statusText} /></label>
             <label className="field"><span>公开邮箱（空则不显示）</span><input name="email" type="email" defaultValue={profile.email} /></label>

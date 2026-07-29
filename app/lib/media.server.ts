@@ -45,34 +45,44 @@ export async function storeImage(file: File, alt: string) {
   const originalName = `original.${originalExtension}`;
   const webpName = "display.webp";
   const avifName = "display.avif";
-  await Promise.all([
-    writeFile(path.join(directory, originalName), bytes, { flag: "wx" }),
-    sharp(bytes, { animated: file.type === "image/gif" })
-      .rotate()
-      .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 84 })
-      .toFile(path.join(directory, webpName)),
-    sharp(bytes)
-      .rotate()
-      .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
-      .avif({ quality: 66 })
-      .toFile(path.join(directory, avifName)),
-  ]);
+  try {
+    const writes = await Promise.allSettled([
+      writeFile(path.join(directory, originalName), bytes, { flag: "wx" }),
+      sharp(bytes, { animated: file.type === "image/gif" })
+        .rotate()
+        .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 84 })
+        .toFile(path.join(directory, webpName)),
+      sharp(bytes)
+        .rotate()
+        .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
+        .avif({ quality: 66 })
+        .toFile(path.join(directory, avifName)),
+    ]);
+    const failedWrite = writes.find(
+      (result): result is PromiseRejectedResult =>
+        result.status === "rejected",
+    );
+    if (failedWrite) throw failedWrite.reason;
 
-  return createMediaRecord({
-    storageKey: `${id}/${originalName}`,
-    originalName: file.name,
-    mimeType: file.type,
-    alt: alt.trim(),
-    width: metadata.width,
-    height: metadata.height,
-    sizeBytes: file.size,
-    variants: {
-      original: `/media/${id}/${originalName}`,
-      webp: `/media/${id}/${webpName}`,
-      avif: `/media/${id}/${avifName}`,
-    },
-  });
+    return await createMediaRecord({
+      storageKey: `${id}/${originalName}`,
+      originalName: file.name,
+      mimeType: file.type,
+      alt: alt.trim(),
+      width: metadata.width,
+      height: metadata.height,
+      sizeBytes: file.size,
+      variants: {
+        original: `/media/${id}/${originalName}`,
+        webp: `/media/${id}/${webpName}`,
+        avif: `/media/${id}/${avifName}`,
+      },
+    });
+  } catch (error) {
+    await rm(directory, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function deleteStoredImage(id: string) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   defaultSiteCustomization,
   isAllowedDisplayUrl,
+  isAllowedImageUrl,
   normalizeSiteCustomization,
 } from "../app/lib/site-customization";
 
@@ -27,6 +28,21 @@ describe("site customization", () => {
 
   it("falls back from unknown accents", () => {
     expect(normalizeSiteCustomization({ accentColor: "neon" }).accentColor).toBe("pink");
+  });
+});
+
+describe("profile image URL validation", () => {
+  it.each([
+    ["/media/avatar/display.webp", true],
+    ["https://avatars.example/avatar.png", true],
+    ["http://localhost/avatar.webp", true],
+    ["", true],
+    ["//evil.example/avatar.png", false],
+    ["mailto:avatar@example.com", false],
+    ["data:image/svg+xml,bad", false],
+    ["javascript:alert(1)", false],
+  ])("validates %s", (value, expected) => {
+    expect(isAllowedImageUrl(value)).toBe(expected);
   });
 });
 
