@@ -250,16 +250,23 @@ GHCR Package 首次出现后，把可见性设为 Public；若保持 Private，�
 - 应用 Secret
 - 分析统计
 
-按照已选方案，备份文件**不加密**，只能放入专用私有仓库 `Mazha0309/mazha0309-top-backups`。定时工作流需要额外 Secret：
+按照已选方案，备份文件**不加密**，只能放入专用私有仓库
+`Mazha0309/mazha0309-top-backups`。定时工作流直接运行在该私有仓库，并使用
+仓库自己的短期 `GITHUB_TOKEN` 发布 Release，不保存个人访问令牌。
 
-| Secret | 用途 |
-| --- | --- |
-| `BACKUP_REPO_TOKEN` | 仅允许向私有备份仓库创建 / 删除 Release 的细粒度 Token |
+私有备份仓库需要以下 Actions 配置：
 
-把该 Token 放入 `production` Environment；它只需对私有备份仓库授予
-Contents Read and write。工作流每天创建一个私有 Release Asset，保留 14 份
-daily 和 8 份 weekly。媒体只压缩一次，并使用低 CPU 压缩级别；上传成功后会
-删除 VPS 上的临时归档。
+| 类型 | 名称 | 用途 |
+| --- | --- | --- |
+| Secret | `VPS_SSH_KEY` | 连接 VPS 的部署私钥 |
+| Secret | `VPS_KNOWN_HOSTS` | 已核对的 VPS Host Key |
+| Variable | `VPS_HOST` | VPS 主机名或 IP |
+| Variable | `VPS_USER` | SSH 用户 |
+| Variable | `VPS_DEPLOY_PATH` | 例如 `/opt/mazha-home` |
+
+工作流每天创建一个经过校验的私有 Release Asset，保留 14 份 daily 和 8 份
+weekly。媒体只压缩一次，并使用低 CPU 压缩级别；上传成功后会删除 VPS 上的
+临时归档。
 
 实际恢复会替换当前 CMS 内容，必须显式确认：
 
