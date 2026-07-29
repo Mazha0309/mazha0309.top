@@ -5829,6 +5829,10 @@ img {
   margin-top: 1.1rem;
 }
 
+.music-bulk-import__picker-note {
+  margin: 0.8rem 0 0;
+}
+
 .music-bulk-import__receipt {
   margin-top: 1.15rem;
   padding-block: 0.85rem 0.15rem;

@@ -5,8 +5,11 @@ import {
   formatMusicFileSize,
   musicFileDisplayName,
   musicFileProblem,
-  sortMusicFiles,
 } from "../lib/music-import";
+import {
+  collectDirectoryFiles,
+  type ReadableDirectoryHandle,
+} from "../lib/directory-picker";
 
 type ImportStatus =
   | "queued"
@@ -41,10 +44,24 @@ interface ImportResponse {
 }
 
 const CONCURRENT_UPLOADS = 2;
+const DIRECTORY_INPUT_ATTRIBUTES = {
+  webkitdirectory: "",
+  directory: "",
+} as Record<string, string>;
 
-function itemId(file: File, index: number) {
-  const path = file.webkitRelativePath || file.name;
-  return `${path}:${file.size}:${file.lastModified}:${index}`;
+interface SelectedMusicFile {
+  file: File;
+  label: string;
+}
+
+interface DirectoryPickerWindow extends Window {
+  showDirectoryPicker?: (options?: {
+    mode?: "read";
+  }) => Promise<ReadableDirectoryHandle>;
+}
+
+function itemId(file: File, label: string, index: number) {
+  return `${label}:${file.size}:${file.lastModified}:${index}`;
 }
 
 function statusLabel(item: ImportItem) {
@@ -66,9 +83,12 @@ export function BulkMusicImporter({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const activeRequestsRef = useRef(new Set<XMLHttpRequest>());
   const runTokenRef = useRef(0);
+  const preferLegacyPickerRef = useRef(false);
   const mountedRef = useRef(true);
   const [items, setItems] = useState<ImportItem[]>([]);
   const [running, setRunning] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [pickerNotice, setPickerNotice] = useState("");
 
   useEffect(() => {
     mountedRef.current = true;
@@ -79,13 +99,6 @@ export function BulkMusicImporter({
       activeRequestsRef.current.clear();
     };
   }, []);
-
-  function setDirectoryInput(node: HTMLInputElement | null) {
-    directoryInputRef.current = node;
-    if (!node) return;
-    node.setAttribute("webkitdirectory", "");
-    node.setAttribute("directory", "");
-  }
 
   function patchItem(id: string, patch: Partial<ImportItem>) {
     if (!mountedRef.current) return;
@@ -236,15 +249,22 @@ export function BulkMusicImporter({
     revalidator.revalidate();
   }
 
-  function importFiles(files: File[]) {
-    if (running || !files.length) return;
+  function importSelectedFiles(selectedFiles: SelectedMusicFile[]) {
+    if (running || !selectedFiles.length) return;
+    setPickerNotice("");
     let importPosition = nextPosition;
-    const prepared = sortMusicFiles(files).map((file, index): ImportItem => {
+    const sorted = [...selectedFiles].sort((left, right) =>
+      left.label.localeCompare(right.label, "zh-CN", {
+        numeric: true,
+        sensitivity: "base",
+      }),
+    );
+    const prepared = sorted.map(({ file, label }, index): ImportItem => {
       const problem = musicFileProblem(file);
       const item: ImportItem = {
-        id: itemId(file, index),
+        id: itemId(file, label, index),
         file,
-        label: musicFileDisplayName(file),
+        label,
         position: importPosition,
         status: problem ? "skipped" : "queued",
         progress: problem ? 100 : 0,
@@ -257,6 +277,54 @@ export function BulkMusicImporter({
 
     setItems(prepared);
     void runQueue(prepared.filter((item) => item.status === "queued"));
+  }
+
+  function importFiles(files: File[]) {
+    importSelectedFiles(
+      files.map((file) => ({
+        file,
+        label: musicFileDisplayName(file),
+      })),
+    );
+  }
+
+  async function openDirectory() {
+    if (running || picking) return;
+    setPickerNotice("");
+    const browserWindow = window as DirectoryPickerWindow;
+    const nativePicker = browserWindow.showDirectoryPicker;
+    if (!nativePicker || preferLegacyPickerRef.current) {
+      directoryInputRef.current?.click();
+      return;
+    }
+
+    setPicking(true);
+    try {
+      const directory = await nativePicker.call(browserWindow, {
+        mode: "read",
+      });
+      const selected = await collectDirectoryFiles(directory);
+      if (!selected.length) {
+        setPickerNotice("这个文件夹空空的，连一小段声音都没摸到。");
+        return;
+      }
+      importSelectedFiles(
+        selected.map(
+          ({ file, relativePath }): SelectedMusicFile => ({
+            file,
+            label: relativePath,
+          }),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      preferLegacyPickerRef.current = true;
+      setPickerNotice(
+        "原生文件夹抽屉没拉开；再点一次按钮，会换兼容方式来选。",
+      );
+    } finally {
+      setPicking(false);
+    }
   }
 
   function retryFailed() {
@@ -327,11 +395,11 @@ export function BulkMusicImporter({
       </div>
 
       <input
-        ref={setDirectoryInput}
+        {...DIRECTORY_INPUT_ATTRIBUTES}
+        ref={directoryInputRef}
         className="sr-only"
         type="file"
         multiple
-        accept={MUSIC_FILE_ACCEPT}
         tabIndex={-1}
         onChange={(event) => {
           importFiles(Array.from(event.currentTarget.files ?? []));
@@ -355,15 +423,19 @@ export function BulkMusicImporter({
         <button
           className="button button--primary"
           type="button"
-          disabled={running}
-          onClick={() => directoryInputRef.current?.click()}
+          disabled={running || picking}
+          onClick={openDirectory}
         >
-          {running ? "正在投喂，先别戳我" : "选音乐文件夹，一键开吃"}
+          {running
+            ? "正在投喂，先别戳我"
+            : picking
+              ? "正在翻这个文件夹……"
+              : "选音乐文件夹，一键开吃"}
         </button>
         <button
           className="button button--secondary"
           type="button"
-          disabled={running}
+          disabled={running || picking}
           onClick={() => fileInputRef.current?.click()}
         >
           只挑几首
@@ -379,6 +451,14 @@ export function BulkMusicImporter({
           </button>
         ) : null}
       </div>
+      {pickerNotice ? (
+        <p
+          className="form-message form-message--warning music-bulk-import__picker-note"
+          aria-live="polite"
+        >
+          {pickerNotice}
+        </p>
+      ) : null}
 
       {items.length ? (
         <div className="music-bulk-import__receipt">
