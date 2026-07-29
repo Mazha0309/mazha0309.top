@@ -84,26 +84,19 @@ function looksLikeLrc(value: string) {
   return /(?:^|\n)\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\]/u.test(value);
 }
 
-function synchronizedTag(tags: ILyricsTag[]) {
-  return (
-    tags.find(
-      (tag) =>
-        tag.contentType === LyricsContentType.lyrics &&
-        tag.timeStampFormat === TimestampFormat.milliseconds &&
-        tag.syncText.some(
-          (line) =>
-            Number.isFinite(line.timestamp) && Boolean(line.text.trim()),
-        ),
-    ) ??
-    tags.find(
-      (tag) =>
-        tag.timeStampFormat === TimestampFormat.milliseconds &&
-        tag.syncText.some(
-          (line) =>
-            Number.isFinite(line.timestamp) && Boolean(line.text.trim()),
-        ),
-    )
+function synchronizedTags(tags: ILyricsTag[]) {
+  const timed = tags.filter(
+    (tag) =>
+      tag.timeStampFormat === TimestampFormat.milliseconds &&
+      tag.syncText.some(
+        (line) =>
+          Number.isFinite(line.timestamp) && Boolean(line.text.trim()),
+      ),
   );
+  const lyrics = timed.filter(
+    (tag) => tag.contentType === LyricsContentType.lyrics,
+  );
+  return lyrics.length ? lyrics : timed;
 }
 
 export function embeddedLyricsToText(tags: ILyricsTag[] | undefined) {
@@ -111,19 +104,25 @@ export function embeddedLyricsToText(tags: ILyricsTag[] | undefined) {
     return { lyrics: "", synchronized: false };
   }
 
-  const synchronized = synchronizedTag(tags);
-  if (synchronized) {
-    const lyrics = synchronized.syncText
-      .filter(
-        (line) =>
-          Number.isFinite(line.timestamp) && Boolean(line.text.trim()),
+  const synchronized = synchronizedTags(tags);
+  if (synchronized.length) {
+    const lyrics = synchronized
+      .flatMap((tag, tagOrder) =>
+        tag.syncText
+          .filter(
+            (line) =>
+              Number.isFinite(line.timestamp) && Boolean(line.text.trim()),
+          )
+          .map((line, lineOrder) => ({ line, tagOrder, lineOrder })),
       )
       .sort(
         (left, right) =>
-          (left.timestamp ?? 0) - (right.timestamp ?? 0),
+          (left.line.timestamp ?? 0) - (right.line.timestamp ?? 0) ||
+          left.tagOrder - right.tagOrder ||
+          left.lineOrder - right.lineOrder,
       )
       .map(
-        (line) =>
+        ({ line }) =>
           `${lrcTimestamp(line.timestamp ?? 0)}${line.text.replace(/\s*\n+\s*/gu, " ").trim()}`,
       )
       .join("\n");

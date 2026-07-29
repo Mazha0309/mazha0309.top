@@ -59,6 +59,26 @@ describe("embeddedLyricsToText", () => {
     });
   });
 
+  it("keeps synchronized original and translated lyric tracks together", () => {
+    const tags: ILyricsTag[] = [
+      {
+        contentType: LyricsContentType.lyrics,
+        timeStampFormat: TimestampFormat.milliseconds,
+        syncText: [{ timestamp: 1_430, text: "沈むように" }],
+      },
+      {
+        contentType: LyricsContentType.lyrics,
+        timeStampFormat: TimestampFormat.milliseconds,
+        syncText: [{ timestamp: 1_430, text: "像是沉溺一般" }],
+      },
+    ];
+
+    expect(embeddedLyricsToText(tags)).toEqual({
+      lyrics: "[00:01.430]沈むように\n[00:01.430]像是沉溺一般",
+      synchronized: true,
+    });
+  });
+
   it("keeps plain embedded lyrics intact", () => {
     const tags: ILyricsTag[] = [
       {

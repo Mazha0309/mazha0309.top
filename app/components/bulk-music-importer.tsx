@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRevalidator } from "react-router";
 import {
   MUSIC_FILE_ACCEPT,
+  fingerprintMusicFile,
   formatMusicFileSize,
+  formatMusicRemainingTime,
+  formatMusicTransferRate,
   musicFileDisplayName,
   musicFileProblem,
 } from "../lib/music-import";
@@ -13,6 +16,7 @@ import {
 
 type ImportStatus =
   | "queued"
+  | "checking"
   | "uploading"
   | "imported"
   | "duplicate"
@@ -43,7 +47,7 @@ interface ImportResponse {
   };
 }
 
-const CONCURRENT_UPLOADS = 2;
+const CONCURRENT_UPLOADS = 1;
 const DIRECTORY_INPUT_ATTRIBUTES = {
   webkitdirectory: "",
   directory: "",
@@ -52,6 +56,13 @@ const DIRECTORY_INPUT_ATTRIBUTES = {
 interface SelectedMusicFile {
   file: File;
   label: string;
+}
+
+interface TransferStats {
+  loadedBytes: number;
+  totalBytes: number;
+  startedAt: number;
+  updatedAt: number;
 }
 
 interface DirectoryPickerWindow extends Window {
@@ -65,6 +76,7 @@ function itemId(file: File, label: string, index: number) {
 }
 
 function statusLabel(item: ImportItem) {
+  if (item.status === "checking") return "对暗号";
   if (item.status === "uploading") return `${item.progress}%`;
   if (item.status === "imported") return "收下啦";
   if (item.status === "duplicate") return "早就在";
@@ -75,8 +87,10 @@ function statusLabel(item: ImportItem) {
 
 export function BulkMusicImporter({
   nextPosition,
+  knownFingerprints,
 }: {
   nextPosition: number;
+  knownFingerprints: string[];
 }) {
   const revalidator = useRevalidator();
   const directoryInputRef = useRef<HTMLInputElement | null>(null);
@@ -84,11 +98,20 @@ export function BulkMusicImporter({
   const activeRequestsRef = useRef(new Set<XMLHttpRequest>());
   const runTokenRef = useRef(0);
   const preferLegacyPickerRef = useRef(false);
+  const knownFingerprintsRef = useRef(new Set(knownFingerprints));
+  const transferredByItemRef = useRef(new Map<string, number>());
+  const transferTotalRef = useRef(0);
   const mountedRef = useRef(true);
   const [items, setItems] = useState<ImportItem[]>([]);
   const [running, setRunning] = useState(false);
   const [picking, setPicking] = useState(false);
   const [pickerNotice, setPickerNotice] = useState("");
+  const [transferStats, setTransferStats] = useState<TransferStats>({
+    loadedBytes: 0,
+    totalBytes: 0,
+    startedAt: 0,
+    updatedAt: 0,
+  });
 
   useEffect(() => {
     mountedRef.current = true;
@@ -100,6 +123,12 @@ export function BulkMusicImporter({
     };
   }, []);
 
+  useEffect(() => {
+    for (const fingerprint of knownFingerprints) {
+      if (fingerprint) knownFingerprintsRef.current.add(fingerprint);
+    }
+  }, [knownFingerprints]);
+
   function patchItem(id: string, patch: Partial<ImportItem>) {
     if (!mountedRef.current) return;
     setItems((current) =>
@@ -107,7 +136,58 @@ export function BulkMusicImporter({
     );
   }
 
-  function uploadOne(item: ImportItem) {
+  function recordTransferredBytes(id: string, loadedBytes: number) {
+    transferredByItemRef.current.set(id, loadedBytes);
+    const totalLoaded = Array.from(
+      transferredByItemRef.current.values(),
+    ).reduce((sum, loaded) => sum + loaded, 0);
+    setTransferStats((current) => ({
+      ...current,
+      loadedBytes: totalLoaded,
+      totalBytes: transferTotalRef.current,
+      updatedAt: performance.now(),
+    }));
+  }
+
+  function excludeKnownFile(item: ImportItem) {
+    transferredByItemRef.current.delete(item.id);
+    transferTotalRef.current = Math.max(
+      0,
+      transferTotalRef.current - item.file.size,
+    );
+    setTransferStats((current) => ({
+      ...current,
+      totalBytes: transferTotalRef.current,
+      updatedAt: performance.now(),
+    }));
+  }
+
+  async function uploadOne(item: ImportItem) {
+    patchItem(item.id, {
+      status: "checking",
+      progress: 0,
+      message: "先在本机算个小指纹，已经收过的就不走网络啦。",
+    });
+    let fingerprint = "";
+    try {
+      fingerprint = await fingerprintMusicFile(item.file);
+    } catch {
+      // Old or restricted browsers can still upload normally and let the
+      // server perform its own duplicate check.
+    }
+    if (
+      fingerprint &&
+      knownFingerprintsRef.current.has(fingerprint)
+    ) {
+      excludeKnownFile(item);
+      patchItem(item.id, {
+        status: "duplicate",
+        progress: 100,
+        message: "本机对上指纹啦，这首已经在歌单里，连上传都省掉。",
+      });
+      return;
+    }
+
     patchItem(item.id, {
       status: "uploading",
       progress: 0,
@@ -132,8 +212,19 @@ export function BulkMusicImporter({
 
       request.upload.addEventListener("progress", (event) => {
         if (!event.lengthComputable) return;
+        recordTransferredBytes(
+          item.id,
+          Math.min(item.file.size, event.loaded),
+        );
         patchItem(item.id, {
           progress: Math.min(99, Math.round((event.loaded / event.total) * 100)),
+        });
+      });
+      request.upload.addEventListener("load", () => {
+        recordTransferredBytes(item.id, item.file.size);
+        patchItem(item.id, {
+          progress: 99,
+          message: "音频已经传完，服务器正在拆封面和歌词……",
         });
       });
 
@@ -178,6 +269,7 @@ export function BulkMusicImporter({
           response.ok &&
           (response.status === "imported" || response.status === "duplicate")
         ) {
+          if (fingerprint) knownFingerprintsRef.current.add(fingerprint);
           patchItem(item.id, {
             status: response.status,
             progress: 100,
@@ -227,6 +319,18 @@ export function BulkMusicImporter({
     if (!queue.length) return;
     const runToken = ++runTokenRef.current;
     let cursor = 0;
+    transferredByItemRef.current.clear();
+    transferTotalRef.current = queue.reduce(
+      (total, item) => total + item.file.size,
+      0,
+    );
+    const startedAt = performance.now();
+    setTransferStats({
+      loadedBytes: 0,
+      totalBytes: transferTotalRef.current,
+      startedAt,
+      updatedAt: startedAt,
+    });
     setRunning(true);
 
     async function worker() {
@@ -373,6 +477,24 @@ export function BulkMusicImporter({
     return Math.round(total / uploadable.length);
   }, [items]);
   const completed = counts.imported + counts.duplicate + counts.failed;
+  const transferElapsedSeconds =
+    transferStats.startedAt > 0
+      ? Math.max(
+          0,
+          (transferStats.updatedAt - transferStats.startedAt) / 1000,
+        )
+      : 0;
+  const transferRate =
+    transferElapsedSeconds > 0
+      ? transferStats.loadedBytes / transferElapsedSeconds
+      : 0;
+  const remainingSeconds =
+    transferRate > 0
+      ? Math.max(
+          0,
+          (transferStats.totalBytes - transferStats.loadedBytes) / transferRate,
+        )
+      : 0;
 
   return (
     <section
@@ -384,8 +506,8 @@ export function BulkMusicImporter({
           <span className="micro-label">FOLDER FEEDER / 一次喂好多首</span>
           <h2 id="bulk-music-title">把整个音乐文件夹端上来</h2>
           <p>
-            选完就自动投喂；每次只搬两首，自己读取歌名、歌手、封面和歌词，
-            重复的音频会认出来，不会偷偷长出双胞胎。
+            选完就自动投喂；一首一首搬，让慢网络也能尽快落下一首。会自己读取
+            歌名、歌手、封面和双语歌词，重选目录时已经收过的歌连上传都省掉。
           </p>
         </div>
         <span className="music-bulk-import__stamp" aria-hidden="true">
@@ -470,6 +592,9 @@ export function BulkMusicImporter({
               {completed}/{counts.uploadable} 首 · 新增 {counts.imported} · 已有{" "}
               {counts.duplicate} · 失败 {counts.failed}
               {counts.skipped ? ` · 略过 ${counts.skipped}` : ""}
+              {running && transferRate > 0
+                ? ` · ${formatMusicTransferRate(transferRate)} · ${formatMusicRemainingTime(remainingSeconds)}`
+                : ""}
             </span>
           </div>
           <progress max={100} value={progress}>

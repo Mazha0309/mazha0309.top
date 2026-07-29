@@ -1,6 +1,7 @@
 export interface LyricLine {
   time: number | null;
   text: string;
+  translations: string[];
 }
 
 export interface ParsedLyrics {
@@ -29,7 +30,11 @@ export function parseLyrics(source: string): ParsedLyrics {
     .map((line) => /^\[offset:([+-]?\d+)\]$/iu.exec(line.trim()))
     .find(Boolean);
   const offsetSeconds = offsetMatch ? Number(offsetMatch[1]) / 1000 : 0;
-  const timedLines: Array<LyricLine & { order: number }> = [];
+  const timedLines: Array<{
+    time: number;
+    text: string;
+    order: number;
+  }> = [];
 
   rawLines.forEach((rawLine, order) => {
     const line = rawLine.trim();
@@ -56,9 +61,25 @@ export function parseLyrics(source: string): ParsedLyrics {
       (left, right) =>
         (left.time ?? 0) - (right.time ?? 0) || left.order - right.order,
     );
+    const groupedLines: LyricLine[] = [];
+    for (const { time, text } of timedLines) {
+      const previous = groupedLines.at(-1);
+      if (
+        previous &&
+        previous.time !== null &&
+        time !== null &&
+        Math.abs(previous.time - time) < 0.001
+      ) {
+        if (text !== previous.text && !previous.translations.includes(text)) {
+          previous.translations.push(text);
+        }
+        continue;
+      }
+      groupedLines.push({ time, text, translations: [] });
+    }
     return {
       timed: true,
-      lines: timedLines.map(({ time, text }) => ({ time, text })),
+      lines: groupedLines,
     };
   }
 
@@ -67,7 +88,7 @@ export function parseLyrics(source: string): ParsedLyrics {
     lines: rawLines
       .map((line) => line.trim())
       .filter((line) => line && !METADATA_PATTERN.test(line))
-      .map((text) => ({ time: null, text })),
+      .map((text) => ({ time: null, text, translations: [] })),
   };
 }
 

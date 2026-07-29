@@ -329,7 +329,12 @@ export default function AdminMusic({
         <p className="form-message form-message--error">{actionData.error}</p>
       ) : null}
 
-      <BulkMusicImporter nextPosition={loaderData.nextPosition} />
+      <BulkMusicImporter
+        nextPosition={loaderData.nextPosition}
+        knownFingerprints={loaderData.tracks.flatMap((track) =>
+          track.sourceFingerprint ? [track.sourceFingerprint] : [],
+        )}
+      />
 
       <details className="admin-panel create-panel">
         <summary>＋ 往歌单塞一首</summary>
