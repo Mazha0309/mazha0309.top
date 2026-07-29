@@ -224,7 +224,7 @@ export function BulkMusicImporter({
         recordTransferredBytes(item.id, item.file.size);
         patchItem(item.id, {
           progress: 99,
-          message: "音频已经传完，服务器正在拆封面和歌词……",
+          message: "音频已经传完，服务器正在读标签、折一张小封面……",
         });
       });
 

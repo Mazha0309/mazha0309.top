@@ -173,43 +173,22 @@ export async function storeAudio(file: File, label: string) {
         warnings.push("看见了内嵌封面，但它超过 8 MB，所以没有展开。");
       } else {
         const webpName = "cover.webp";
-        const avifName = "cover.avif";
         try {
-          const pictureMetadata = await sharp(picture, {
-            limitInputPixels: 40_000_000,
-          }).metadata();
-          if (!pictureMetadata.width || !pictureMetadata.height) {
-            throw new Error("embedded picture has no dimensions");
-          }
-          await Promise.all([
-            sharp(picture, { limitInputPixels: 40_000_000 })
-              .rotate()
-              .resize({
-                width: 1200,
-                height: 1200,
-                fit: "inside",
-                withoutEnlargement: true,
-              })
-              .webp({ quality: 84 })
-              .toFile(path.join(directory, webpName)),
-            sharp(picture, { limitInputPixels: 40_000_000 })
-              .rotate()
-              .resize({
-                width: 1200,
-                height: 1200,
-                fit: "inside",
-                withoutEnlargement: true,
-              })
-              .avif({ quality: 66 })
-              .toFile(path.join(directory, avifName)),
-          ]);
+          await sharp(picture, { limitInputPixels: 40_000_000 })
+            .rotate()
+            .resize({
+              width: 640,
+              height: 640,
+              fit: "inside",
+              withoutEnlargement: true,
+            })
+            .webp({ quality: 82, effort: 1 })
+            .toFile(path.join(directory, webpName));
           variants.coverWebp = `/media/${id}/${webpName}`;
-          variants.coverAvif = `/media/${id}/${avifName}`;
         } catch {
-          await Promise.all([
-            rm(path.join(directory, webpName), { force: true }),
-            rm(path.join(directory, avifName), { force: true }),
-          ]).catch(() => undefined);
+          await rm(path.join(directory, webpName), { force: true }).catch(
+            () => undefined,
+          );
           warnings.push("看见了内嵌封面，但图片格式太怪，没有强行展开。");
         }
       }
