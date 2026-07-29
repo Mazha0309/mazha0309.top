@@ -592,11 +592,34 @@ export async function listMusicTracks(
   return rows as MusicTrackRecord[];
 }
 
+export async function findMusicTrackBySourceFingerprint(
+  sourceFingerprint: string,
+) {
+  if (!hasDatabase()) return null;
+  const [track] = await getDb()
+    .select()
+    .from(musicTracks)
+    .where(eq(musicTracks.sourceFingerprint, sourceFingerprint))
+    .limit(1);
+  return (track as MusicTrackRecord | undefined) ?? null;
+}
+
+export async function getMusicTrack(id: string) {
+  if (!hasDatabase()) return null;
+  const [track] = await getDb()
+    .select()
+    .from(musicTracks)
+    .where(eq(musicTracks.id, id))
+    .limit(1);
+  return (track as MusicTrackRecord | undefined) ?? null;
+}
+
 export async function saveMusicTrack(input: {
   id?: string;
   title: string;
   artist: string;
   audioUrl: string;
+  sourceFingerprint?: string | null;
   coverUrl: string | null;
   lyrics: string;
   position: number;
@@ -612,6 +635,9 @@ export async function saveMusicTrack(input: {
     position: input.position,
     enabled: input.enabled,
     updatedAt: new Date(),
+    ...(input.sourceFingerprint !== undefined
+      ? { sourceFingerprint: input.sourceFingerprint }
+      : {}),
   };
   if (input.id) {
     const [saved] = await getDb()

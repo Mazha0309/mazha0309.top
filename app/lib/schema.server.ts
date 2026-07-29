@@ -279,6 +279,7 @@ export const musicTracks = pgTable(
     title: text("title").notNull(),
     artist: text("artist").notNull().default(""),
     audioUrl: text("audio_url").notNull(),
+    sourceFingerprint: text("source_fingerprint"),
     coverUrl: text("cover_url"),
     lyrics: text("lyrics").notNull().default(""),
     position: integer("position").notNull().default(0),
@@ -294,6 +295,9 @@ export const musicTracks = pgTable(
     index("music_tracks_enabled_position_idx").on(
       table.enabled,
       table.position,
+    ),
+    uniqueIndex("music_tracks_source_fingerprint_idx").on(
+      table.sourceFingerprint,
     ),
   ],
 );

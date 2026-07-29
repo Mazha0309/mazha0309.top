@@ -4,6 +4,8 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { requireAdmin } from "../lib/auth.server";
 import {
   deleteMusicTrack,
+  findMusicTrackBySourceFingerprint,
+  getMusicTrack,
   listMusicTracks,
   moveMusicTrack,
   saveMusicTrack,
@@ -17,10 +19,17 @@ import { formString, requireSameOrigin } from "../lib/security.server";
 import { isAllowedMediaUrl } from "../lib/site-customization";
 import type { MusicTrackRecord } from "../lib/types";
 import { audioTitleFromFilename } from "../lib/audio-metadata.server";
+import { BulkMusicImporter } from "../components/bulk-music-importer";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await requireAdmin(request);
-  return { tracks: await listMusicTracks({ includeDisabled: true }) };
+  const tracks = await listMusicTracks({ includeDisabled: true });
+  return {
+    tracks,
+    nextPosition:
+      tracks.reduce((highest, track) => Math.max(highest, track.position), -1) +
+      1,
+  };
 }
 
 function fileFrom(form: FormData, name: string) {
@@ -75,6 +84,7 @@ export async function action({ request }: ActionFunctionArgs) {
     let lyrics = formString(form, "lyrics", { max: 80_000 });
     let audioUrl = formString(form, "audioUrl", { max: 600 });
     let coverUrl = formString(form, "coverUrl", { max: 600 });
+    let sourceFingerprint: string | null | undefined;
     let embeddedCoverUrl = "";
     const discovered: string[] = [];
     const warnings: string[] = [];
@@ -92,7 +102,16 @@ export async function action({ request }: ActionFunctionArgs) {
         `${title || audioTitleFromFilename(audioFile.name)} / 音频`,
       );
       createdMediaIds.push(storedAudio.record.id);
+      const duplicate = await findMusicTrackBySourceFingerprint(
+        storedAudio.fingerprint,
+      );
+      if (duplicate && duplicate.id !== id) {
+        throw new Error(
+          `「${duplicate.title}」和这份音频一模一样，歌单里已经有一只啦。`,
+        );
+      }
       audioUrl = storedAudio.record.variants.original;
+      sourceFingerprint = storedAudio.fingerprint;
       warnings.push(...storedAudio.warnings);
       if (!title && storedAudio.embedded.title) {
         title = storedAudio.embedded.title;
@@ -109,6 +128,16 @@ export async function action({ request }: ActionFunctionArgs) {
         );
       }
       embeddedCoverUrl = storedAudio.embedded.coverUrl ?? "";
+    } else if (id) {
+      const existingTrack = await getMusicTrack(id);
+      if (!existingTrack) {
+        throw new Error("这首歌已经不在播放清单里了。");
+      }
+      if (existingTrack.audioUrl !== audioUrl) {
+        // A fingerprint belongs to the uploaded bytes, not to a later URL the
+        // owner may paste over them.
+        sourceFingerprint = null;
+      }
     }
     if (!title && audioFile) {
       title = audioTitleFromFilename(audioFile.name);
@@ -135,6 +164,7 @@ export async function action({ request }: ActionFunctionArgs) {
       title,
       artist,
       audioUrl,
+      sourceFingerprint,
       coverUrl: coverUrl || null,
       lyrics,
       position: numericPosition(formString(form, "position", { max: 8 })),
@@ -298,6 +328,8 @@ export default function AdminMusic({
       {actionData && !actionData.ok ? (
         <p className="form-message form-message--error">{actionData.error}</p>
       ) : null}
+
+      <BulkMusicImporter nextPosition={loaderData.nextPosition} />
 
       <details className="admin-panel create-panel">
         <summary>＋ 往歌单塞一首</summary>
