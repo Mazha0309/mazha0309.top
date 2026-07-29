@@ -21,9 +21,11 @@ test("homepage exposes the identity and featured projects", async ({ page }) => 
     "/favicon.svg",
   );
   await expect(page.locator(".marquee-strip__group")).toHaveCount(2);
-  await expect(
-    page.locator(".marquee-strip__group").first().locator("span"),
-  ).toHaveCount(4);
+  const marqueeGroups = await page
+    .locator(".marquee-strip__group")
+    .allTextContents();
+  expect(marqueeGroups[0]).toBe(marqueeGroups[1]);
+  expect(Array.from(marqueeGroups[0] ?? "").length).toBeGreaterThan(400);
 });
 
 test("blog starts empty for the owner to write", async ({ page }) => {
