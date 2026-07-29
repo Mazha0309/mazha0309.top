@@ -3,6 +3,7 @@ import {
   estimateReadingMinutes,
   isSafeInternalPath,
   mdxToText,
+  normalizeTextLineBreaks,
   slugify,
   splitTags,
 } from "../app/lib/content-utils";
@@ -19,6 +20,16 @@ describe("content utilities", () => {
       "自托管",
       "猫",
     ]);
+  });
+
+  it("normalizes real and escaped line breaks without treating /n as markup", () => {
+    expect(normalizeTextLineBreaks("喵喵喵，\\n 这里是 Mazha0309")).toBe(
+      "喵喵喵，\n这里是 Mazha0309",
+    );
+    expect(normalizeTextLineBreaks("第一行\r\n第二行")).toBe("第一行\n第二行");
+    expect(normalizeTextLineBreaks("普通的 /n 还是普通文字")).toBe(
+      "普通的 /n 还是普通文字",
+    );
   });
 
   it("produces searchable plain text from MDX", () => {

@@ -32,7 +32,13 @@ import {
   fallbackProjects,
 } from "./seed-content";
 import { normalizeSiteCustomization } from "./site-customization";
-import { estimateReadingMinutes, mdxToText, slugify, splitTags } from "./content-utils";
+import {
+  estimateReadingMinutes,
+  mdxToText,
+  normalizeTextLineBreaks,
+  slugify,
+  splitTags,
+} from "./content-utils";
 import type {
   ContentLink,
   FriendLinkRecord,
@@ -61,6 +67,7 @@ function hydrateProfile(profile?: typeof siteProfiles.$inferSelect): SiteProfile
   const source = profile ?? fallbackProfile;
   return {
     ...source,
+    heroTitle: normalizeTextLineBreaks(source.heroTitle),
     customization: normalizeSiteCustomization(source.customization),
   } as SiteProfile;
 }
