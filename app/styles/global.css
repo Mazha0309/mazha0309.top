@@ -661,14 +661,24 @@ img {
   transform: rotate(-0.45deg) scale(1.01);
 }
 
-.marquee-strip > div {
+.marquee-strip__track {
   display: flex;
   width: max-content;
-  animation: marquee 24s linear infinite;
+  animation: marquee 64s linear infinite;
+  will-change: transform;
 }
 
-.marquee-strip span {
-  padding: 0.72rem 0;
+.marquee-strip__group {
+  display: flex;
+  min-width: min(100vw, 1500px);
+  flex: none;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.marquee-strip__group span {
+  flex: none;
+  padding: 0.72rem 1.15rem;
   font-family: var(--font-system);
   font-size: 0.75rem;
   font-weight: 800;
@@ -679,6 +689,18 @@ img {
 @keyframes marquee {
   to {
     transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-strip__track {
+    animation: none !important;
+    transform: none;
+    will-change: auto;
+  }
+
+  .marquee-strip__group:nth-child(2) {
+    display: none;
   }
 }
 

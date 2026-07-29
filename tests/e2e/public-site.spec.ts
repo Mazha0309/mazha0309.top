@@ -20,6 +20,10 @@ test("homepage exposes the identity and featured projects", async ({ page }) => 
     "href",
     "/favicon.svg",
   );
+  await expect(page.locator(".marquee-strip__group")).toHaveCount(2);
+  await expect(
+    page.locator(".marquee-strip__group").first().locator("span"),
+  ).toHaveCount(4);
 });
 
 test("blog starts empty for the owner to write", async ({ page }) => {
