@@ -1,14 +1,21 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { getAnalytics } from "../lib/content.server";
+import {
+  getAnalytics,
+  getPublicAnalyticsTotals,
+} from "../lib/content.server";
 import { requireAdmin } from "../lib/auth.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await requireAdmin(request);
-  const rows = await getAnalytics(30);
+  const [rows, lifetime] = await Promise.all([
+    getAnalytics(30),
+    getPublicAnalyticsTotals(),
+  ]);
   const totals = new Map<string, number>();
   for (const row of rows) totals.set(row.path, (totals.get(row.path) ?? 0) + row.views);
   return {
     rows,
+    lifetime,
     totalViews: rows.reduce((sum, row) => sum + row.views, 0),
     popular: [...totals.entries()]
       .map(([path, views]) => ({ path, views }))
@@ -28,8 +35,22 @@ export default function AdminAnalytics({
       <header className="admin-heading">
         <span className="micro-label">PRIVATE ANALYTICS / 30 DAYS</span>
         <h1>{loaderData.totalViews} 次被看见</h1>
-        <p>只按“日期 + 路径”聚合；不保存完整 IP，且尊重 DNT 与 GPC。</p>
+        <p>路径只按天聚合；独立访客使用匿名浏览器纸片，不保存 IP 或身份，并尊重 DNT 与 GPC。</p>
       </header>
+      <dl className="analytics-summary" aria-label="累计访问统计">
+        <div>
+          <dt>ALL VIEWS / 累计翻阅</dt>
+          <dd>{loaderData.lifetime.views}</dd>
+        </div>
+        <div>
+          <dt>UNIQUE / 独立访客</dt>
+          <dd>{loaderData.lifetime.uniqueVisitors}</dd>
+        </div>
+        <div>
+          <dt>LAST 30 DAYS / 近三十天</dt>
+          <dd>{loaderData.totalViews}</dd>
+        </div>
+      </dl>
       <section className="admin-panel analytics-list">
         <h2>热门路径</h2>
         {loaderData.popular.length ? loaderData.popular.map((row) => (

@@ -21,11 +21,37 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 const allowedAccents = new Set<SiteAccent>(["pink", "blue", "mint", "purple", "orange"]);
 
+function parseSiteLaunchTime(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/u.test(value)) {
+    throw new Error("开张时间格式不对，请重新选择一次。");
+  }
+  const withSeconds = value.length === 16 ? `${value}:00` : value;
+  const parsed = new Date(`${withSeconds}+08:00`);
+  if (!Number.isFinite(parsed.getTime())) {
+    throw new Error("开张时间格式不对，请重新选择一次。");
+  }
+  return parsed.toISOString();
+}
+
+function siteLaunchInputValue(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(date).replace(" ", "T");
+}
+
 export async function action({ request }: ActionFunctionArgs) {
   await requireAdmin(request);
   requireSameOrigin(request);
   const form = await request.formData();
-  let uploadedAvatarId: string | null = null;
+  const uploadedMediaIds: string[] = [];
   try {
     const rawLinks = JSON.parse(formString(form, "linksJson")) as unknown;
     if (!Array.isArray(rawLinks)) throw new Error("链接配置格式不对，请刷新页面后重试。");
@@ -55,9 +81,28 @@ export async function action({ request }: ActionFunctionArgs) {
     const accent = formString(form, "accentColor", { max: 20 }) as SiteAccent;
     if (!allowedAccents.has(accent)) throw new Error("主色选项不在允许范围内。");
 
+    const displayName = formString(form, "displayName", {
+      required: true,
+      max: 80,
+    });
+    let faviconUrl = formString(form, "faviconUrl", { max: 600 });
+    const faviconFile = form.get("faviconFile");
+    if (faviconFile instanceof File && faviconFile.size > 0) {
+      const uploadedFavicon = await storeImage(faviconFile, "网站小图标");
+      uploadedMediaIds.push(uploadedFavicon.id);
+      faviconUrl = uploadedFavicon.variants.original;
+    }
+    if (!isAllowedImageUrl(faviconUrl)) {
+      throw new Error("网站图标地址只允许站内路径或 HTTP(S) 图片。");
+    }
+
     const customization = normalizeSiteCustomization({
       siteTitle: formString(form, "siteTitle", { required: true, max: 120 }),
       siteDescription: formString(form, "siteDescription", { max: 240 }),
+      faviconUrl,
+      siteLaunchedAt: parseSiteLaunchTime(
+        formString(form, "siteLaunchedAt", { required: true, max: 32 }),
+      ),
       brandMark: formString(form, "brandMark", { required: true, max: 2 }),
       brandSubtitle: formString(form, "brandSubtitle", { max: 60 }),
       footerText: formString(form, "footerText", { max: 220 }),
@@ -91,10 +136,6 @@ export async function action({ request }: ActionFunctionArgs) {
       if (!isAllowedDisplayUrl(url)) throw new Error(`${label}地址格式不安全。`);
     }
 
-    const displayName = formString(form, "displayName", {
-      required: true,
-      max: 80,
-    });
     let avatarUrl = formString(form, "avatarUrl", { max: 600 });
     const avatarFile = form.get("avatarFile");
     if (avatarFile instanceof File && avatarFile.size > 0) {
@@ -102,7 +143,7 @@ export async function action({ request }: ActionFunctionArgs) {
         avatarFile,
         `${displayName} 的头像`,
       );
-      uploadedAvatarId = uploadedAvatar.id;
+      uploadedMediaIds.push(uploadedAvatar.id);
       avatarUrl =
         uploadedAvatar.variants.webp ?? uploadedAvatar.variants.original;
     }
@@ -132,16 +173,18 @@ export async function action({ request }: ActionFunctionArgs) {
     );
     return {
       ok: true,
-      message: uploadedAvatarId
-        ? "新头像已经贴好，站点外观与链接也一起保存啦。"
+      message: uploadedMediaIds.length
+        ? "新图片已经贴好，站点外观、开张时间与链接也一起保存啦。"
         : "站点外观、首页文案与链接都保存好了。",
       heroTitle,
       savedAt: Date.now(),
     };
   } catch (error) {
-    if (uploadedAvatarId) {
-      await deleteStoredImage(uploadedAvatarId).catch(() => undefined);
-    }
+    await Promise.all(
+      uploadedMediaIds.map((id) =>
+        deleteStoredImage(id).catch(() => undefined),
+      ),
+    );
     return { ok: false, error: error instanceof Error ? error.message : "保存失败。" };
   }
 }
@@ -268,6 +311,110 @@ function AvatarUploadField({
   );
 }
 
+function FaviconUploadField({
+  value,
+  savedAt,
+}: {
+  value: string;
+  savedAt?: number;
+}) {
+  const [faviconUrl, setFaviconUrl] = useState(value);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [fileName, setFileName] = useState("");
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const previewSource = filePreview ?? faviconUrl.trim();
+
+  useEffect(() => {
+    setFaviconUrl(value);
+  }, [value]);
+
+  useEffect(() => {
+    setPreviewFailed(false);
+    return () => {
+      if (filePreview) URL.revokeObjectURL(filePreview);
+    };
+  }, [filePreview, previewSource]);
+
+  useEffect(() => {
+    if (!savedAt) return;
+    if (fileInput.current) fileInput.current.value = "";
+    setFileName("");
+    setFilePreview(null);
+  }, [savedAt]);
+
+  function clearSelectedFile() {
+    if (fileInput.current) fileInput.current.value = "";
+    setFileName("");
+    setFilePreview(null);
+  }
+
+  return (
+    <div className="site-icon-editor field--wide">
+      <div className="site-icon-editor__preview">
+        {previewSource && !previewFailed ? (
+          <img
+            src={previewSource}
+            alt="网站图标预览"
+            onError={() => setPreviewFailed(true)}
+          />
+        ) : (
+          <span aria-live="polite">?</span>
+        )}
+        <small>{filePreview ? "NEW ICON" : "BROWSER ICON"}</small>
+      </div>
+      <div className="profile-avatar-editor__controls">
+        <label className="field">
+          <span>
+            网站小图标 <small>FAVICON / URL 兜底</small>
+          </span>
+          <input
+            name="faviconUrl"
+            type="text"
+            inputMode="url"
+            maxLength={600}
+            value={faviconUrl}
+            onChange={(event) => setFaviconUrl(event.currentTarget.value)}
+            placeholder="/favicon.svg 或 /media/..."
+          />
+        </label>
+        <label className="avatar-file-picker">
+          <input
+            ref={fileInput}
+            name="faviconFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            aria-describedby="favicon-upload-note"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (!file) {
+                clearSelectedFile();
+                return;
+              }
+              setFileName(file.name);
+              setFilePreview(URL.createObjectURL(file));
+            }}
+          />
+          <span>上传新的小图标 ↗</span>
+          <output>{fileName || "推荐正方形 PNG / WEBP"}</output>
+        </label>
+        <div className="profile-avatar-editor__note" id="favicon-upload-note">
+          <p>最大 8 MB；保存后浏览器标签页会自动换脸，旧缓存可能要等一小会儿。</p>
+          {fileName ? (
+            <button
+              className="text-button"
+              type="button"
+              onClick={clearSelectedFile}
+            >
+              撤回这次选择
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminSettings({
   loaderData,
 }: {
@@ -336,8 +483,24 @@ export default function AdminSettings({
               <input name="brandMark" maxLength={2} defaultValue={customization.brandMark} required />
             </label>
             <label className="field"><span>品牌副标题</span><input name="brandSubtitle" defaultValue={customization.brandSubtitle} /></label>
+            <FaviconUploadField
+              value={customization.faviconUrl}
+              savedAt={actionData?.ok ? actionData.savedAt : undefined}
+            />
             <label className="field field--wide"><span>浏览器与分享标题</span><input name="siteTitle" defaultValue={customization.siteTitle} required /></label>
             <label className="field field--wide"><span>搜索与分享摘要</span><textarea name="siteDescription" rows={2} defaultValue={customization.siteDescription} /></label>
+            <label className="field field--wide">
+              <span>
+                小站开张时间
+                <small>用于公开页的累计营业时长（北京时间）</small>
+              </span>
+              <input
+                name="siteLaunchedAt"
+                type="datetime-local"
+                defaultValue={siteLaunchInputValue(customization.siteLaunchedAt)}
+                required
+              />
+            </label>
             <label className="field field--wide"><span>页脚小字</span><input name="footerText" defaultValue={customization.footerText} /></label>
           </div>
         </section>

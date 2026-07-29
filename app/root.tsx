@@ -7,18 +7,19 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useRouteLoaderData,
 } from "react-router";
 import type { LinksFunction, LoaderFunctionArgs, MetaFunction } from "react-router";
 import stylesheet from "./styles/global.css?url";
 import articleStylesheet from "./styles/article.css?url";
-import { getSiteShell } from "./lib/content.server";
+import { getPublicAnalyticsTotals, getSiteShell } from "./lib/content.server";
 import { SearchPalette } from "./components/search-palette";
+import { SiteLedger } from "./components/site-ledger";
 import { getSession, isAdminSession } from "./lib/auth.server";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
   { rel: "stylesheet", href: articleStylesheet },
-  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
 ];
 
 export const meta: MetaFunction<typeof loader> = ({ loaderData }) => [
@@ -43,12 +44,15 @@ export function headers() {
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const [shell, session] = await Promise.all([
+  const [shell, session, analytics] = await Promise.all([
     getSiteShell(),
     getSession(request),
+    getPublicAnalyticsTotals(),
   ]);
   return {
     ...shell,
+    analytics,
+    serverNow: Date.now(),
     isAdmin: isAdminSession(session),
     viewer: session
       ? {
@@ -60,6 +64,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const rootData = useRouteLoaderData<typeof loader>("root");
+  const faviconUrl =
+    rootData?.profile.customization.faviconUrl || "/favicon.svg";
+
   return (
     <html lang="zh-CN">
       <head>
@@ -68,6 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="theme-color" content="#f5efe5" />
         <Meta />
         <Links />
+        <link rel="icon" href={faviconUrl} />
       </head>
       <body>
         {children}
@@ -101,7 +110,14 @@ function Brand({
 }
 
 export default function App() {
-  const { profile, links, isAdmin, viewer } = useLoaderData<typeof loader>();
+  const {
+    profile,
+    links,
+    analytics,
+    serverNow,
+    isAdmin,
+    viewer,
+  } = useLoaderData<typeof loader>();
   const customization = profile.customization;
   const navigation = links.filter((link) => link.kind === "nav" && link.url);
   const socials = links.filter((link) => link.kind === "social" && link.url);
@@ -171,6 +187,12 @@ export default function App() {
       </main>
 
       <footer className="site-footer">
+        <SiteLedger
+          startedAt={customization.siteLaunchedAt}
+          views={analytics.views}
+          uniqueVisitors={analytics.uniqueVisitors}
+          serverNow={serverNow}
+        />
         <div>
           <span className="micro-label">SEE YOU AROUND / {new Date().getFullYear()}</span>
           <p>

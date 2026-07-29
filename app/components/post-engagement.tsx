@@ -251,10 +251,12 @@ export function PostComments({
   comments,
   viewer,
   githubConfigured,
+  developmentIdentity,
 }: {
   comments: PublicCommentRecord[];
   viewer: CommentViewer | null;
   githubConfigured: boolean;
+  developmentIdentity: boolean;
 }) {
   const fetcher = useFetcher<CommentActionData>();
   const [draft, setDraft] = useState("");
@@ -305,16 +307,26 @@ export function PostComments({
             <strong>{viewer.name}</strong>
           </p>
           {viewer.isAdmin ? <em>主人巡逻中</em> : <em>GitHub 路人证</em>}
-          <button
-            className="comment-text-button"
-            type="button"
-            onClick={async () => {
-              await authClient.signOut();
-              window.location.reload();
-            }}
-          >
-            换个账号
-          </button>
+          {developmentIdentity ? (
+            <span
+              className="comment-dev-identity"
+              title="本地开发绕过已开启，身份由服务端固定。"
+            >
+              DEV 固定身份
+            </span>
+          ) : (
+            <button
+              className="comment-text-button"
+              type="button"
+              title="只退出本站的评论身份，不会退出 GitHub。"
+              onClick={async () => {
+                await authClient.signOut();
+                window.location.reload();
+              }}
+            >
+              退出评论身份
+            </button>
+          )}
         </div>
       ) : (
         <div className="comment-login-note">

@@ -152,6 +152,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       mediaSize: formatStorage(mediaSizeBytes),
       pages: pages.length,
       viewsLifetime: lifetime.views,
+      uniqueVisitors: lifetime.uniqueVisitors,
       views7,
       views30,
       viewsToday: dayTotals.get(today.toISOString().slice(0, 10)) ?? 0,
@@ -287,6 +288,11 @@ export default function AdminDashboard({
           <small>今天 {loaderData.counts.viewsToday} · 7 天 {loaderData.counts.views7} · 30 天 {loaderData.counts.views30}</small>
         </article>
         <article>
+          <span>VISITORS / 独立访客</span>
+          <strong>{formatCount(loaderData.counts.uniqueVisitors)}</strong>
+          <small>按匿名浏览器纸片估算，从启用统计后累计</small>
+        </article>
+        <article>
           <span>PAPER MAIL / 留言纸条</span>
           <strong>{loaderData.counts.comments}</strong>
           <small>
@@ -311,7 +317,7 @@ export default function AdminDashboard({
             </div>
             <p>
               {loaderData.counts.views7
-                ? `今天捡到 ${loaderData.counts.viewsToday} 枚脚印，统计很克制，没有偷偷记住访客是谁。`
+                ? `今天捡到 ${loaderData.counts.viewsToday} 枚脚印，只认匿名浏览器纸片，不记 IP 和身份。`
                 : "这周还安安静静的，第一枚脚印可能正在穿鞋。"}
             </p>
           </div>
@@ -369,7 +375,7 @@ export default function AdminDashboard({
           ) : (
             <p className="popular-peek__empty">排行榜还在睡觉。公开页面有人来过以后，它就会自己醒啦。</p>
           )}
-          <small className="popular-peek__privacy">不存完整 IP，并尊重 DNT / GPC。</small>
+          <small className="popular-peek__privacy">不存 IP 或身份，并尊重 DNT / GPC。</small>
         </aside>
       </div>
 
@@ -459,6 +465,7 @@ export default function AdminDashboard({
             </header>
             <dl>
               <div><dt>累计浏览</dt><dd>{formatCount(loaderData.counts.viewsLifetime)}</dd></div>
+              <div><dt>独立访客</dt><dd>{formatCount(loaderData.counts.uniqueVisitors)}</dd></div>
               <div><dt>最近 30 天</dt><dd>{formatCount(loaderData.counts.views30)}</dd></div>
               <div><dt>前一个 30 天</dt><dd>{formatCount(loaderData.traffic.previousViews30)}</dd></div>
               <div><dt>月环比</dt><dd>{formatChange(loaderData.traffic.monthChange)}</dd></div>

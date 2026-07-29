@@ -406,6 +406,18 @@
   background: var(--mint);
 }
 
+.comment-dev-identity {
+  padding: 0.28rem 0.5rem;
+  color: var(--ink-muted);
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 55%, transparent);
+  border-radius: 10px 14px 9px 12px;
+  font-family: var(--font-system);
+  font-size: 0.5rem;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  transform: rotate(-1deg);
+}
+
 .comment-login-note {
   display: grid;
   min-width: 0;

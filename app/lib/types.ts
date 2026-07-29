@@ -16,6 +16,8 @@ export type ProjectIconShape =
 export interface SiteCustomization {
   siteTitle: string;
   siteDescription: string;
+  faviconUrl: string;
+  siteLaunchedAt: string;
   brandMark: string;
   brandSubtitle: string;
   footerText: string;

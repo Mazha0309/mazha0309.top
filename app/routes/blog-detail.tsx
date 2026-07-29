@@ -14,7 +14,11 @@ import {
   listPublicComments,
 } from "../lib/comments.server";
 import { normalizeCommentBody } from "../lib/comments";
-import { getSession, isAdminSession } from "../lib/auth.server";
+import {
+  getSession,
+  isAdminSession,
+  isDevelopmentAuthBypass,
+} from "../lib/auth.server";
 import { requireSameOrigin } from "../lib/security.server";
 
 function formatDate(value?: Date | string | null) {
@@ -69,6 +73,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     githubConfigured: Boolean(
       process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET,
     ),
+    developmentIdentity: isDevelopmentAuthBypass(),
   };
 }
 
@@ -176,7 +181,14 @@ export default function BlogDetail({
 }: {
   loaderData: Awaited<ReturnType<typeof loader>>;
 }) {
-  const { post, html, comments, viewer, githubConfigured } = loaderData;
+  const {
+    post,
+    html,
+    comments,
+    viewer,
+    githubConfigured,
+    developmentIdentity,
+  } = loaderData;
   return (
     <div className="article-shell content-width">
       <PageViewBeacon path={`/blog/${post.slug}`} />
@@ -215,6 +227,7 @@ export default function BlogDetail({
         comments={comments}
         viewer={viewer}
         githubConfigured={githubConfigured}
+        developmentIdentity={developmentIdentity}
       />
     </div>
   );

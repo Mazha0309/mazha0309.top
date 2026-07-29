@@ -302,3 +302,18 @@ export const analyticsDaily = pgTable(
     index("analytics_day_idx").on(table.day),
   ],
 );
+
+export const analyticsVisitors = pgTable(
+  "analytics_visitors",
+  {
+    visitorHash: text("visitor_hash").primaryKey(),
+    views: integer("views").notNull().default(1),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("analytics_visitors_last_seen_idx").on(table.lastSeenAt)],
+);

@@ -7,6 +7,10 @@ const isDevelopmentBypass =
   process.env.NODE_ENV !== "production" &&
   process.env.DEV_ADMIN_BYPASS === "true";
 
+export function isDevelopmentAuthBypass() {
+  return isDevelopmentBypass;
+}
+
 function authConnectionString() {
   const source =
     process.env.DATABASE_URL ??

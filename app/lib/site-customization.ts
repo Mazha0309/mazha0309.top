@@ -3,6 +3,8 @@ import type { SiteAccent, SiteCustomization } from "./types";
 export const defaultSiteCustomization: SiteCustomization = {
   siteTitle: "Mazha0309 — 喵喵喵的数字工作台",
   siteDescription: "项目、文章和正在发生的怪点子，全都钉在这张数字工作台上。",
+  faviconUrl: "/favicon.svg",
+  siteLaunchedAt: "2026-07-28T16:00:00.000Z",
   brandMark: "M",
   brandSubtitle: "HOMEPAGE & BLOG",
   footerText: "这张纸由 React、PostgreSQL 和一点不必要的执念驱动。",
@@ -30,6 +32,16 @@ export const defaultSiteCustomization: SiteCustomization = {
 
 const accents = new Set<SiteAccent>(["pink", "blue", "mint", "purple", "orange"]);
 
+function normalizedLaunchTime(value: unknown) {
+  if (typeof value !== "string") {
+    return defaultSiteCustomization.siteLaunchedAt;
+  }
+  const date = new Date(value);
+  return Number.isFinite(date.getTime())
+    ? date.toISOString()
+    : defaultSiteCustomization.siteLaunchedAt;
+}
+
 export function normalizeSiteCustomization(input: unknown): SiteCustomization {
   const source = input && typeof input === "object" ? input as Record<string, unknown> : {};
   const text = (key: keyof SiteCustomization): string =>
@@ -45,6 +57,8 @@ export function normalizeSiteCustomization(input: unknown): SiteCustomization {
   return {
     siteTitle: text("siteTitle"),
     siteDescription: text("siteDescription"),
+    faviconUrl: text("faviconUrl").trim() || defaultSiteCustomization.faviconUrl,
+    siteLaunchedAt: normalizedLaunchTime(source.siteLaunchedAt),
     brandMark: text("brandMark").slice(0, 2) || defaultSiteCustomization.brandMark,
     brandSubtitle: text("brandSubtitle"),
     footerText: text("footerText"),
