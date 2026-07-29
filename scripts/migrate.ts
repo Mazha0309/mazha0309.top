@@ -5,14 +5,18 @@ import { getDb, getPool } from "../app/lib/db.server";
 
 async function main() {
   const pool = getPool();
+  console.log("Migration phase 1/4: preparing PostgreSQL extensions and schemas.");
   await pool.query("create extension if not exists pg_trgm");
   await pool.query("create schema if not exists auth");
 
+  console.log("Migration phase 2/4: checking Better Auth schema.");
   const authMigrations = await getMigrations(auth.options);
   await authMigrations.runMigrations();
 
+  console.log("Migration phase 3/4: applying application migrations.");
   await migrate(getDb(), { migrationsFolder: "drizzle" });
 
+  console.log("Migration phase 4/4: refreshing search indexes.");
   // Keep trigram expressions to immutable functions accepted by PostgreSQL.
   await pool.query(`
     create index if not exists posts_title_trgm_idx
