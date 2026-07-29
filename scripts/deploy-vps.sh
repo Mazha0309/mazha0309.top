@@ -26,12 +26,33 @@ if ((${#stale_oneoffs[@]} > 0)); then
 fi
 
 active_oneoff=""
+previous_image=""
+app_stopped_for_deploy=false
+
 cleanup_active_oneoff() {
   if [[ -n "$active_oneoff" ]]; then
     docker rm -f "$active_oneoff" >/dev/null 2>&1 || true
   fi
 }
-trap cleanup_active_oneoff EXIT
+
+cleanup_on_exit() {
+  local exit_code=$?
+  trap - EXIT
+  set +e
+  cleanup_active_oneoff
+  if
+    ((exit_code != 0)) &&
+    [[ "$app_stopped_for_deploy" == true ]] &&
+    [[ -n "$previous_image" ]] &&
+    [[ "$previous_image" != "$APP_IMAGE" ]]
+  then
+    echo "Deployment failed; restoring $previous_image" >&2
+    export APP_IMAGE="$previous_image"
+    docker compose up -d --no-build app postgres >&2
+  fi
+  exit "$exit_code"
+}
+trap cleanup_on_exit EXIT
 
 run_app_oneoff() {
   local name="$1"
@@ -55,7 +76,6 @@ run_app_oneoff() {
 }
 
 container_id="$(docker compose ps -q app 2>/dev/null || true)"
-previous_image=""
 if [[ -n "$container_id" ]]; then
   previous_image="$(docker inspect --format '{{.Config.Image}}' "$container_id" 2>/dev/null || true)"
 fi
@@ -81,6 +101,12 @@ if [[ "$database_ready" != true ]]; then
   echo "PostgreSQL did not become ready." >&2
   docker compose logs --tail=120 postgres >&2 || true
   exit 1
+fi
+
+if [[ -n "$container_id" ]]; then
+  echo "Stopping the current application to free memory for migrations"
+  app_stopped_for_deploy=true
+  docker compose stop -t 20 app
 fi
 
 echo "Applying forward-only database migrations"
@@ -109,12 +135,7 @@ fi
 
 echo "Readiness check failed." >&2
 docker compose logs --tail=120 app >&2 || true
-
-if [[ -n "$previous_image" && "$previous_image" != "$APP_IMAGE" ]]; then
-  echo "Rolling the app container back to $previous_image" >&2
-  export APP_IMAGE="$previous_image"
-  docker compose up -d --no-build app
-else
+if [[ -z "$previous_image" || "$previous_image" == "$APP_IMAGE" ]]; then
   echo "No previous image was available for automatic rollback." >&2
 fi
 
