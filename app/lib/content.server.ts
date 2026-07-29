@@ -713,6 +713,43 @@ export async function getAnalytics(days = 30) {
     .orderBy(desc(analyticsDaily.day), desc(analyticsDaily.views));
 }
 
+export async function getAdminDashboardTotals() {
+  if (!hasDatabase()) {
+    return {
+      views: 0,
+      trackedDays: 0,
+      trackedPaths: 0,
+      firstTrackedDay: null as string | null,
+      revisions: 0,
+    };
+  }
+
+  const db = getDb();
+  const [analyticsRows, revisionRows] = await Promise.all([
+    db
+      .select({
+        views: sql<number>`coalesce(sum(${analyticsDaily.views}), 0)::bigint`,
+        trackedDays: sql<number>`count(distinct ${analyticsDaily.day})::int`,
+        trackedPaths: sql<number>`count(distinct ${analyticsDaily.path})::int`,
+        firstTrackedDay: sql<string | null>`min(${analyticsDaily.day})`,
+      })
+      .from(analyticsDaily),
+    db
+      .select({
+        revisions: sql<number>`count(*)::int`,
+      })
+      .from(postRevisions),
+  ]);
+
+  return {
+    views: Number(analyticsRows[0]?.views ?? 0),
+    trackedDays: Number(analyticsRows[0]?.trackedDays ?? 0),
+    trackedPaths: Number(analyticsRows[0]?.trackedPaths ?? 0),
+    firstTrackedDay: analyticsRows[0]?.firstTrackedDay ?? null,
+    revisions: Number(revisionRows[0]?.revisions ?? 0),
+  };
+}
+
 export async function getPublishedSlugs() {
   if (!hasDatabase()) {
     return fallbackPosts.map((post) => ({
