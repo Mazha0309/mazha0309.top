@@ -29,6 +29,26 @@ describe("site customization", () => {
   it("falls back from unknown accents", () => {
     expect(normalizeSiteCustomization({ accentColor: "neon" }).accentColor).toBe("pink");
   });
+
+  it("keeps a valid launch time and repairs invalid legacy values", () => {
+    expect(
+      normalizeSiteCustomization({
+        siteLaunchedAt: "2026-07-29T00:00:00+08:00",
+      }).siteLaunchedAt,
+    ).toBe("2026-07-28T16:00:00.000Z");
+    expect(
+      normalizeSiteCustomization({ siteLaunchedAt: "sometime maybe" })
+        .siteLaunchedAt,
+    ).toBe(defaultSiteCustomization.siteLaunchedAt);
+  });
+
+  it("hydrates the favicon for older saved customization", () => {
+    expect(normalizeSiteCustomization({}).faviconUrl).toBe("/favicon.svg");
+    expect(
+      normalizeSiteCustomization({ faviconUrl: "/media/site/icon.png" })
+        .faviconUrl,
+    ).toBe("/media/site/icon.png");
+  });
 });
 
 describe("profile image URL validation", () => {

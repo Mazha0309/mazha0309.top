@@ -12,6 +12,7 @@ import {
 import { getDb, getPool, hasDatabase } from "./db.server";
 import {
   analyticsDaily,
+  analyticsVisitors,
   comments,
   contentLinks,
   friendLinks,
@@ -704,16 +705,37 @@ export async function createMediaRecord(
   return record as MediaRecord;
 }
 
-export async function recordPageView(path: string) {
+export async function recordPageView(path: string, visitorHash?: string) {
   if (!hasDatabase()) return;
   const day = new Date().toISOString().slice(0, 10);
-  await getDb()
-    .insert(analyticsDaily)
-    .values({ day, path, views: 1 })
-    .onConflictDoUpdate({
-      target: [analyticsDaily.day, analyticsDaily.path],
-      set: { views: sql`${analyticsDaily.views} + 1` },
-    });
+  const now = new Date();
+  await getDb().transaction(async (transaction) => {
+    await transaction
+      .insert(analyticsDaily)
+      .values({ day, path, views: 1 })
+      .onConflictDoUpdate({
+        target: [analyticsDaily.day, analyticsDaily.path],
+        set: { views: sql`${analyticsDaily.views} + 1` },
+      });
+
+    if (visitorHash) {
+      await transaction
+        .insert(analyticsVisitors)
+        .values({
+          visitorHash,
+          views: 1,
+          firstSeenAt: now,
+          lastSeenAt: now,
+        })
+        .onConflictDoUpdate({
+          target: analyticsVisitors.visitorHash,
+          set: {
+            views: sql`${analyticsVisitors.views} + 1`,
+            lastSeenAt: now,
+          },
+        });
+    }
+  });
 }
 
 export async function getAnalytics(days = 30) {
@@ -728,10 +750,38 @@ export async function getAnalytics(days = 30) {
     .orderBy(desc(analyticsDaily.day), desc(analyticsDaily.views));
 }
 
+export async function getPublicAnalyticsTotals() {
+  if (!hasDatabase()) {
+    return {
+      views: 0,
+      uniqueVisitors: 0,
+    };
+  }
+
+  const [viewRows, visitorRows] = await Promise.all([
+    getDb()
+      .select({
+        views: sql<number>`coalesce(sum(${analyticsDaily.views}), 0)::bigint`,
+      })
+      .from(analyticsDaily),
+    getDb()
+      .select({
+        uniqueVisitors: sql<number>`count(*)::int`,
+      })
+      .from(analyticsVisitors),
+  ]);
+
+  return {
+    views: Number(viewRows[0]?.views ?? 0),
+    uniqueVisitors: Number(visitorRows[0]?.uniqueVisitors ?? 0),
+  };
+}
+
 export async function getAdminDashboardTotals() {
   if (!hasDatabase()) {
     return {
       views: 0,
+      uniqueVisitors: 0,
       trackedDays: 0,
       trackedPaths: 0,
       firstTrackedDay: null as string | null,
@@ -744,7 +794,7 @@ export async function getAdminDashboardTotals() {
   }
 
   const db = getDb();
-  const [analyticsRows, revisionRows, commentRows] = await Promise.all([
+  const [analyticsRows, visitorRows, revisionRows, commentRows] = await Promise.all([
     db
       .select({
         views: sql<number>`coalesce(sum(${analyticsDaily.views}), 0)::bigint`,
@@ -753,6 +803,11 @@ export async function getAdminDashboardTotals() {
         firstTrackedDay: sql<string | null>`min(${analyticsDaily.day})`,
       })
       .from(analyticsDaily),
+    db
+      .select({
+        uniqueVisitors: sql<number>`count(*)::int`,
+      })
+      .from(analyticsVisitors),
     db
       .select({
         revisions: sql<number>`count(*)::int`,
@@ -770,6 +825,7 @@ export async function getAdminDashboardTotals() {
 
   return {
     views: Number(analyticsRows[0]?.views ?? 0),
+    uniqueVisitors: Number(visitorRows[0]?.uniqueVisitors ?? 0),
     trackedDays: Number(analyticsRows[0]?.trackedDays ?? 0),
     trackedPaths: Number(analyticsRows[0]?.trackedPaths ?? 0),
     firstTrackedDay: analyticsRows[0]?.firstTrackedDay ?? null,
