@@ -98,10 +98,18 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
       </section>
 
       {customization.marqueeText ? (
-        <section className="marquee-strip" aria-label="站点状态">
-          <div>
-            <span>{customization.marqueeText}</span>
-            <span aria-hidden="true">{customization.marqueeText}</span>
+        <section
+          className="marquee-strip"
+          aria-label={`站点状态：${customization.marqueeText}`}
+        >
+          <div className="marquee-strip__track" aria-hidden="true">
+            {[0, 1].map((group) => (
+              <div className="marquee-strip__group" key={group}>
+                {Array.from({ length: 4 }, (_, item) => (
+                  <span key={item}>{customization.marqueeText}</span>
+                ))}
+              </div>
+            ))}
           </div>
         </section>
       ) : null}
