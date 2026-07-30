@@ -1,5 +1,11 @@
 export type PublishStatus = "draft" | "scheduled" | "published";
 
+export interface MdxHeading {
+  id: string;
+  text: string;
+  level: 1 | 2 | 3 | 4;
+}
+
 export type SiteAccent = "pink" | "blue" | "mint" | "purple" | "orange";
 export type ProjectIconMode = "random" | "preset" | "custom" | "image";
 export type ProjectIconShape =
