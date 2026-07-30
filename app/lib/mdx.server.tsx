@@ -8,6 +8,8 @@ import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import type { ReactNode } from "react";
+import { slugify } from "./content-utils";
+import type { MdxHeading } from "./types";
 
 const ALLOWED_COMPONENTS = new Set(["Note", "Stamp", "Gallery"]);
 const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
@@ -38,7 +40,7 @@ function validateUrl(value: string, image = false) {
   }
 }
 
-export function validateMdx(source: string) {
+function parseAndValidateMdx(source: string) {
   if (source.length > 200_000) {
     throw new UnsafeMdxError("单篇文章不能超过 200,000 个字符。");
   }
@@ -82,7 +84,55 @@ export function validateMdx(source: string) {
     }
   });
 
+  return tree;
+}
+
+export function validateMdx(source: string) {
+  parseAndValidateMdx(source);
   return true;
+}
+
+function plainHeadingText(node: any): string {
+  if (
+    (node.type === "text" ||
+      node.type === "inlineCode" ||
+      node.type === "code") &&
+    typeof node.value === "string"
+  ) {
+    return node.value;
+  }
+  if (node.type === "image" && typeof node.alt === "string") {
+    return node.alt;
+  }
+  if (!Array.isArray(node.children)) return "";
+  return node.children.map(plainHeadingText).join("");
+}
+
+function collectHeadings(tree: ReturnType<typeof parseAndValidateMdx>) {
+  const headings: MdxHeading[] = [];
+  const occurrences = new Map<string, number>();
+
+  visit(tree, (node: any) => {
+    if (
+      node.type !== "heading" ||
+      ![1, 2, 3, 4].includes(node.depth)
+    ) {
+      return;
+    }
+
+    const text = plainHeadingText(node).replace(/\s+/gu, " ").trim();
+    if (!text) return;
+    const base = slugify(text) || `section-${headings.length + 1}`;
+    const occurrence = (occurrences.get(base) ?? 0) + 1;
+    occurrences.set(base, occurrence);
+    headings.push({
+      id: `heading-${base}${occurrence > 1 ? `-${occurrence}` : ""}`,
+      text,
+      level: node.depth as MdxHeading["level"],
+    });
+  });
+
+  return headings;
 }
 
 function Note({
@@ -109,7 +159,7 @@ function Gallery({ children }: { children?: ReactNode }) {
   return <div className="mdx-gallery">{children}</div>;
 }
 
-const components = {
+const baseComponents = {
   Note,
   Stamp,
   Gallery,
@@ -126,8 +176,40 @@ const components = {
   },
 };
 
-export async function renderSafeMdx(source: string) {
-  validateMdx(source);
+function createComponents(headings: MdxHeading[]) {
+  let headingCursor = 0;
+  const headingComponent =
+    (level: MdxHeading["level"]) =>
+    ({
+      children,
+      ...props
+    }: React.HTMLAttributes<HTMLHeadingElement>) => {
+      const heading = headings[headingCursor];
+      headingCursor += 1;
+      const Tag = `h${level}` as "h1" | "h2" | "h3" | "h4";
+      return (
+        <Tag
+          {...props}
+          id={heading?.level === level ? heading.id : undefined}
+        >
+          {children}
+        </Tag>
+      );
+    };
+
+  return {
+    ...baseComponents,
+    h1: headingComponent(1),
+    h2: headingComponent(2),
+    h3: headingComponent(3),
+    h4: headingComponent(4),
+  };
+}
+
+export async function renderSafeMdxDocument(source: string) {
+  const tree = parseAndValidateMdx(source);
+  const headings = collectHeadings(tree);
+  const components = createComponents(headings);
 
   const module = await evaluate(source, {
     ...runtime,
@@ -144,5 +226,12 @@ export async function renderSafeMdx(source: string) {
     useMDXComponents: () => components,
   });
 
-  return renderToStaticMarkup(<module.default components={components} />);
+  return {
+    html: renderToStaticMarkup(<module.default components={components} />),
+    headings,
+  };
+}
+
+export async function renderSafeMdx(source: string) {
+  return (await renderSafeMdxDocument(source)).html;
 }

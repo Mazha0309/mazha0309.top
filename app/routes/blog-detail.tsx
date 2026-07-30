@@ -5,8 +5,9 @@ import type {
   MetaFunction,
 } from "react-router";
 import { getPublicPost } from "../lib/content.server";
-import { renderSafeMdx } from "../lib/mdx.server";
+import { renderSafeMdxDocument } from "../lib/mdx.server";
 import { PageViewBeacon, PostComments } from "../components/post-engagement";
+import { ArticleReader } from "../components/article-reader";
 import {
   CommentMutationError,
   createComment,
@@ -54,13 +55,14 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   }
   if (!result.post) throw new Response("Not found", { status: 404 });
 
-  const [html, comments] = await Promise.all([
-    renderSafeMdx(result.post.contentMdx),
+  const [rendered, comments] = await Promise.all([
+    renderSafeMdxDocument(result.post.contentMdx),
     listPublicComments(result.post.id, session?.user.id),
   ]);
   return {
     post: result.post,
-    html,
+    html: rendered.html,
+    headings: rendered.headings,
     comments,
     viewer: session
       ? {
@@ -184,18 +186,19 @@ export default function BlogDetail({
   const {
     post,
     html,
+    headings,
     comments,
     viewer,
     githubConfigured,
     developmentIdentity,
   } = loaderData;
   return (
-    <div className="article-shell content-width">
+    <div className="article-shell article-shell--blog content-width">
       <PageViewBeacon path={`/blog/${post.slug}`} />
       <Link className="back-link" to="/blog">
         ← 回到纸片堆
       </Link>
-      <article>
+      <ArticleReader html={html} headings={headings}>
         <header className="article-header">
           <span className="scrap-label">BLOG NOTE / 新鲜墨迹</span>
           <h1>{post.title}</h1>
@@ -218,11 +221,7 @@ export default function BlogDetail({
             ME
           </span>
         </header>
-        <div
-          className="prose"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      </article>
+      </ArticleReader>
       <PostComments
         comments={comments}
         viewer={viewer}
