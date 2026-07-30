@@ -43,6 +43,8 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
   const { profile, posts, projects, nowHtml } = loaderData;
   const customization = profile.customization;
   const showLowerDesk = customization.showBlog || customization.showNow;
+  const showProjectsSection =
+    customization.showProjects && projects.length > 0;
   const marquee = customization.marqueeText
     ? buildMarqueeLoop(customization.marqueeText)
     : null;
@@ -102,11 +104,11 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
             <span>NOW</span>
             {profile.statusText}
           </div>
-          <span className="identity-stamp" aria-hidden="true">
-            HELLO
-            <br />
-            呀
-          </span>
+          {customization.identityStampText ? (
+            <span className="identity-stamp" aria-hidden="true">
+              {customization.identityStampText}
+            </span>
+          ) : null}
         </div>
       </section>
 
@@ -131,7 +133,7 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
         </section>
       ) : null}
 
-      {customization.showProjects ? <section className="home-section content-width">
+      {showProjectsSection ? <section className="home-section content-width">
         <div className="section-title-row">
           <div>
             <span className="micro-label">{customization.projectsEyebrow}</span>
@@ -142,7 +144,7 @@ export default function Home({ loaderData }: { loaderData: Awaited<ReturnType<ty
           </Link>
         </div>
         <div className="project-grid project-grid--featured">
-          {projects.slice(0, 3).map((project, index) => (
+          {projects.map((project, index) => (
             <ProjectCard key={project.id} project={project} index={index} />
           ))}
         </div>

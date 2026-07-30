@@ -80,3 +80,8 @@ export function parseDateInput(value: FormDataEntryValue | null) {
 export function isSafeInternalPath(value: string) {
   return value.startsWith("/") && !value.startsWith("//") && !value.includes("\\");
 }
+
+export function buildAuthCallbackUrl(value: string, origin: string) {
+  const callbackPath = isSafeInternalPath(value) ? value : "/admin";
+  return new URL(callbackPath, origin).toString();
+}

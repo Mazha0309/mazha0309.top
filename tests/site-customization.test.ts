@@ -49,6 +49,17 @@ describe("site customization", () => {
         .faviconUrl,
     ).toBe("/media/site/icon.png");
   });
+
+  it("hydrates and preserves the customizable identity stamp", () => {
+    expect(normalizeSiteCustomization({}).identityStampText).toBe("HELLO\n呀");
+    expect(
+      normalizeSiteCustomization({ identityStampText: "喵喵\n到此一游" })
+        .identityStampText,
+    ).toBe("喵喵\n到此一游");
+    expect(
+      normalizeSiteCustomization({ identityStampText: "" }).identityStampText,
+    ).toBe("");
+  });
 });
 
 describe("profile image URL validation", () => {

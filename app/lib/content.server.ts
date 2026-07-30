@@ -117,7 +117,10 @@ export async function getHomepageContent() {
   if (!hasDatabase()) {
     return {
       posts: fallbackPosts,
-      projects: fallbackProjects,
+      projects: fallbackProjects
+        .filter((project) => project.featured)
+        .sort((left, right) => left.position - right.position)
+        .slice(0, 3),
       now: fallbackPages.find((page) => page.slug === "now")!,
     };
   }
@@ -133,8 +136,9 @@ export async function getHomepageContent() {
     db
       .select()
       .from(projects)
-      .orderBy(desc(projects.featured), asc(projects.position))
-      .limit(6),
+      .where(eq(projects.featured, true))
+      .orderBy(asc(projects.position))
+      .limit(3),
     db.select().from(pages).where(eq(pages.slug, "now")).limit(1),
   ]);
 

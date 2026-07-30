@@ -3,7 +3,7 @@ import { redirect, useSearchParams } from "react-router";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import { authClient } from "../lib/auth-client";
 import { getAdminSession } from "../lib/auth.server";
-import { isSafeInternalPath } from "../lib/content-utils";
+import { buildAuthCallbackUrl } from "../lib/content-utils";
 
 export const meta: MetaFunction = () => [
   { title: "主人入口 — Mazha0309" },
@@ -30,7 +30,6 @@ export default function AdminLogin({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const nextValue = params.get("next") ?? "/admin";
-  const callbackURL = isSafeInternalPath(nextValue) ? nextValue : "/admin";
   const ready = loaderData.githubConfigured && loaderData.databaseConfigured;
 
   return (
@@ -52,7 +51,10 @@ export default function AdminLogin({
             setError("");
             const result = await authClient.signIn.social({
               provider: "github",
-              callbackURL,
+              callbackURL: buildAuthCallbackUrl(
+                nextValue,
+                window.location.origin,
+              ),
             });
             if (result?.error) {
               setError(result.error.message ?? "GitHub 登录失败。");

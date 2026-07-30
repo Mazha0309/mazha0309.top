@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import { hasDatabase } from "./db.server";
 
 const allowedGitHubId = process.env.ALLOWED_GITHUB_ID ?? "99137842";
+const appOrigin = process.env.APP_ORIGIN ?? "http://localhost:5173";
 const isDevelopmentBypass =
   process.env.NODE_ENV !== "production" &&
   process.env.DEV_ADMIN_BYPASS === "true";
@@ -50,7 +51,8 @@ const github =
 
 export const auth = betterAuth({
   appName: "Mazha0309 Home Console",
-  baseURL: process.env.APP_ORIGIN ?? "http://localhost:5173",
+  baseURL: appOrigin,
+  trustedOrigins: [appOrigin],
   secret:
     process.env.BETTER_AUTH_SECRET ??
     "development-only-secret-change-before-production",
@@ -63,8 +65,20 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
   },
+  rateLimit: {
+    customRules: {
+      "/sign-in/social": {
+        window: 10,
+        max: 10,
+      },
+    },
+  },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
+    ipAddress: {
+      ipAddressHeaders: ["x-forwarded-for"],
+      trustedProxies: ["127.0.0.1", "::1"],
+    },
   },
   user: {
     additionalFields: {

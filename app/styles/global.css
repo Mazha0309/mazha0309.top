@@ -647,6 +647,7 @@ img {
   font-size: 1.55rem;
   line-height: 0.8;
   text-align: center;
+  white-space: pre-line;
   border: 4px double var(--pink);
   border-radius: 50%;
   background: color-mix(in srgb, var(--paper-raised) 84%, transparent);
