@@ -320,9 +320,10 @@ export default function AdminComments({
         <details className="comment-ai-defense-note">
           <summary>提示词注入是怎么防的？</summary>
           <p>
-            固定规则放在 developer 消息；评论只作为 JSON 编码的 user
-            数据传入；模型没有工具或数据库权限；输出必须匹配严格 JSON
-            Schema，服务端还会再校验一次。任何超时、拒答、乱格式都不会放行。
+            固定规则放在高优先级 system 消息；评论只作为 JSON 编码的 user
+            数据传入；模型没有工具或数据库权限；OpenAI 原生接口使用严格 JSON
+            Schema，其他兼容接口使用 JSON 模式，服务端都会再按同一份结构校验。
+            任何超时、拒答、乱格式都不会放行。
           </p>
           <p>
             默认会拦截广告引流、诈骗、纯攻击性垃圾话、露骨黄色废料和以操纵审核器为目的的注入；
