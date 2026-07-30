@@ -210,17 +210,6 @@ function cleanPublicComment(
   row: typeof comments.$inferSelect,
   viewerId?: string | null,
 ): PublicCommentRecord {
-  if (row.status === "deleted") {
-    return {
-      ...row,
-      body: "",
-      authorName: "一位把纸条揉掉的路人",
-      authorAvatarUrl: null,
-      authorGithubId: null,
-      isOwner: false,
-    };
-  }
-
   return {
     ...row,
     body: row.status === "active" ? row.body : "",
@@ -239,7 +228,7 @@ export async function listPublicComments(
     .where(
       and(
         eq(comments.postId, postId),
-        inArray(comments.status, ["active", "hidden", "deleted"]),
+        inArray(comments.status, ["active", "hidden"]),
         isNotNull(comments.publishedAt),
       ),
     )

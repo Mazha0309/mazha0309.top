@@ -33,15 +33,18 @@ export function buildCommentThreads(
 ): CommentThread[] {
   const threads: CommentThread[] = [];
   const roots = new Map<string, CommentThread>();
+  const visibleComments = comments.filter(
+    (comment) => comment.status !== "deleted",
+  );
 
-  for (const comment of comments) {
+  for (const comment of visibleComments) {
     if (comment.parentId) continue;
     const thread = { ...comment, replies: [] };
     threads.push(thread);
     roots.set(comment.id, thread);
   }
 
-  for (const comment of comments) {
+  for (const comment of visibleComments) {
     if (!comment.parentId) continue;
     const parent = roots.get(comment.parentId);
     if (parent) {

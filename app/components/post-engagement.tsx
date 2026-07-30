@@ -87,13 +87,6 @@ function CommentBody({
       </p>
     );
   }
-  if (comment.status === "deleted") {
-    return (
-      <p className="comment-paper__withheld">
-        纸条已经被揉掉，只剩下一点折痕。
-      </p>
-    );
-  }
   return <p className="comment-paper__body">{comment.body}</p>;
 }
 

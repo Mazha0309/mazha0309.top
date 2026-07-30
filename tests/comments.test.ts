@@ -9,6 +9,7 @@ import type { PublicCommentRecord } from "../app/lib/types";
 function comment(
   id: string,
   parentId: string | null = null,
+  status: PublicCommentRecord["status"] = "active",
 ): PublicCommentRecord {
   return {
     id,
@@ -17,7 +18,7 @@ function comment(
     authorId: `author-${id}`,
     authorName: `路人 ${id}`,
     body: `纸条 ${id}`,
-    status: "active",
+    status,
     moderation: {},
     isOwner: false,
     createdAt: "2026-07-29T00:00:00.000Z",
@@ -65,5 +66,17 @@ describe("comment threads", () => {
     const threads = buildCommentThreads([comment("orphan", "missing")]);
     expect(threads).toHaveLength(1);
     expect(threads[0]).toMatchObject({ id: "orphan", parentId: null });
+  });
+
+  it("omits deleted notes while preserving their visible replies", () => {
+    const threads = buildCommentThreads([
+      comment("deleted-root", null, "deleted"),
+      comment("visible-reply", "deleted-root"),
+    ]);
+    expect(threads).toHaveLength(1);
+    expect(threads[0]).toMatchObject({
+      id: "visible-reply",
+      parentId: null,
+    });
   });
 });
