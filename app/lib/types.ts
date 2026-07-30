@@ -22,6 +22,7 @@ export interface SiteCustomization {
   brandSubtitle: string;
   footerText: string;
   heroKicker: string;
+  identityStampText: string;
   primaryActionLabel: string;
   primaryActionUrl: string;
   secondaryActionLabel: string;

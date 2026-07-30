@@ -107,6 +107,9 @@ export async function action({ request }: ActionFunctionArgs) {
       brandSubtitle: formString(form, "brandSubtitle", { max: 60 }),
       footerText: formString(form, "footerText", { max: 220 }),
       heroKicker: formString(form, "heroKicker", { max: 120 }),
+      identityStampText: normalizeTextLineBreaks(
+        formString(form, "identityStampText", { max: 60 }),
+      ),
       primaryActionLabel: formString(form, "primaryActionLabel", { max: 40 }),
       primaryActionUrl: formString(form, "primaryActionUrl", { max: 600 }),
       secondaryActionLabel: formString(form, "secondaryActionLabel", { max: 40 }),
@@ -177,6 +180,7 @@ export async function action({ request }: ActionFunctionArgs) {
         ? "新图片已经贴好，站点外观、开张时间与链接也一起保存啦。"
         : "站点外观、首页文案与链接都保存好了。",
       heroTitle,
+      identityStampText: customization.identityStampText,
       savedAt: Date.now(),
     };
   } catch (error) {
@@ -514,6 +518,25 @@ export default function AdminSettings({
           <div className="form-grid">
             <label className="field field--wide"><span>Hero 眉题</span><input name="heroEyebrow" defaultValue={profile.heroEyebrow} /></label>
             <label className="field field--wide"><span>Hero 招呼</span><input name="heroKicker" defaultValue={customization.heroKicker} /></label>
+            <label className="field field--wide">
+              <span>
+                头像旁圆章
+                <small>
+                  回车换行，也兼容 <code>{"\\n"}</code>；留空就藏起来
+                </small>
+              </span>
+              <textarea
+                key={actionData?.ok ? actionData.savedAt : "identity-stamp"}
+                name="identityStampText"
+                rows={2}
+                maxLength={60}
+                defaultValue={
+                  actionData?.ok
+                    ? actionData.identityStampText
+                    : customization.identityStampText
+                }
+              />
+            </label>
             <label className="field field--wide hero-title-field">
               <span>
                 Hero 主标题

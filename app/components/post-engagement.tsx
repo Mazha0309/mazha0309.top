@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFetcher } from "react-router";
 import { authClient } from "../lib/auth-client";
+import { buildAuthCallbackUrl } from "../lib/content-utils";
 import {
   buildCommentThreads,
   COMMENT_BODY_MAX,
@@ -342,7 +343,10 @@ export function PostComments({
             onClick={async () => {
               setLoginBusy(true);
               setLoginError("");
-              const callbackURL = `${window.location.pathname}${window.location.search}`;
+              const callbackURL = buildAuthCallbackUrl(
+                `${window.location.pathname}${window.location.search}`,
+                window.location.origin,
+              );
               const result = await authClient.signIn.social({
                 provider: "github",
                 callbackURL,
