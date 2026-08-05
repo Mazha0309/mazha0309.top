@@ -1,4 +1,4 @@
-# mazha0309.top
+# mazha0309.com
 
 Mazha0309 的动态个人主页 + Blog。它是一张会生长的数字工作台：公开页面像一本圆润手写的数字手账，后台则保留同一套纸张与便签语言，但把装饰密度降下来方便长期写作。
 
@@ -115,8 +115,8 @@ npm run dev
 
 在 GitHub 创建 OAuth App：
 
-- Homepage URL：`https://mazha0309.top`
-- Authorization callback URL：`https://mazha0309.top/api/auth/callback/github`
+- Homepage URL：`https://mazha0309.com`
+- Authorization callback URL：`https://mazha0309.com/api/auth/callback/github`
 
 保留 Client ID 和 Client Secret，稍后放入 VPS `.env`。
 
@@ -146,7 +146,7 @@ cd /opt/mazha-home
 
 ```dotenv
 NODE_ENV=production
-APP_ORIGIN=https://mazha0309.top
+APP_ORIGIN=https://mazha0309.com
 TZ=Asia/Shanghai
 POSTGRES_PASSWORD=足够长且随机的数据库密码
 BETTER_AUTH_SECRET=至少32字节的随机值
@@ -198,7 +198,7 @@ AI 审核默认关闭。若要启用，直接进入 `/admin/comments` 填写 API
 `main` 每次更新会：
 
 1. 构建并测试 Docker 镜像
-2. 推送 `ghcr.io/mazha0309/mazha0309.top:<commit-sha>`
+2. 推送 `ghcr.io/mazha0309/mazha0309blog:<commit-sha>`
 3. SSH 到 VPS
 4. 执行数据库迁移与幂等 Seed
 5. 重启 `app`，保留 PostgreSQL 和媒体卷

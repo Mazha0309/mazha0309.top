@@ -1,5 +1,5 @@
 {
-  "name": "mazha0309-top",
+  "name": "mazha0309blog",
   "private": true,
   "type": "module",
   "scripts": {
@@ -57,6 +57,7 @@
     "@types/react-dom": "latest",
     "drizzle-kit": "latest",
     "jsdom": "latest",
+    "prettier": "^3.9.6",
     "typescript": "latest",
     "vite": "latest",
     "vitest": "latest"

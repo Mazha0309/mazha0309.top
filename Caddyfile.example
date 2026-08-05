@@ -1,4 +1,4 @@
-mazha0309.top {
+mazha0309.com {
 	encode zstd gzip
 
 	header {
@@ -11,6 +11,6 @@ mazha0309.top {
 	reverse_proxy 127.0.0.1:3000
 }
 
-www.mazha0309.top {
-	redir https://mazha0309.top{uri} permanent
+www.mazha0309.com {
+	redir https://mazha0309.com{uri} permanent
 }

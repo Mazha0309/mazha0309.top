@@ -21,7 +21,7 @@ services:
       retries: 12
 
   app:
-    image: mazha0309-top:dev
+    image: mazha0309blog:dev
     build:
       context: .
       target: dependencies

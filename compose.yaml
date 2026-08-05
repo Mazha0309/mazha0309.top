@@ -45,7 +45,7 @@ services:
         max-file: "3"
 
   app:
-    image: ${APP_IMAGE:-mazha0309-top:local}
+    image: ${APP_IMAGE:-mazha0309blog:local}
     build:
       context: .
       target: runtime

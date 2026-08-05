@@ -123,13 +123,13 @@ describe("content utilities", () => {
     expect(
       buildAuthCallbackUrl(
         "/blog/%E4%B8%80%E5%BC%A0%E6%96%B0%E7%9A%84%E7%BA%B8%E7%89%87",
-        "https://mazha0309.top",
+        "https://mazha0309.com",
       ),
     ).toBe(
-      "https://mazha0309.top/blog/%E4%B8%80%E5%BC%A0%E6%96%B0%E7%9A%84%E7%BA%B8%E7%89%87",
+      "https://mazha0309.com/blog/%E4%B8%80%E5%BC%A0%E6%96%B0%E7%9A%84%E7%BA%B8%E7%89%87",
     );
     expect(
-      buildAuthCallbackUrl("https://evil.example", "https://mazha0309.top"),
-    ).toBe("https://mazha0309.top/admin");
+      buildAuthCallbackUrl("https://evil.example", "https://mazha0309.com"),
+    ).toBe("https://mazha0309.com/admin");
   });
 });

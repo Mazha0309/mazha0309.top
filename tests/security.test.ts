@@ -22,18 +22,18 @@ function rejectedStatus(request: Request) {
 
 describe("same-origin mutation guard", () => {
   it("accepts the canonical public origin behind an internal HTTP proxy", () => {
-    process.env.APP_ORIGIN = "https://mazha0309.top";
-    const request = new Request("http://mazha0309.top/admin/projects", {
+    process.env.APP_ORIGIN = "https://mazha0309.com";
+    const request = new Request("http://mazha0309.com/admin/projects", {
       method: "POST",
-      headers: { origin: "https://mazha0309.top" },
+      headers: { origin: "https://mazha0309.com" },
     });
 
     expect(() => requireSameOrigin(request)).not.toThrow();
   });
 
   it("still rejects a foreign origin", () => {
-    process.env.APP_ORIGIN = "https://mazha0309.top";
-    const request = new Request("http://mazha0309.top/admin/projects", {
+    process.env.APP_ORIGIN = "https://mazha0309.com";
+    const request = new Request("http://mazha0309.com/admin/projects", {
       method: "POST",
       headers: { origin: "https://attacker.example" },
     });

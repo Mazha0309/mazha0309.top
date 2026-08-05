@@ -18,7 +18,7 @@ permissions:
 
 env:
   # OCI registry repository names must be lowercase.
-  IMAGE_NAME: ghcr.io/mazha0309/mazha0309.top
+  IMAGE_NAME: ghcr.io/mazha0309/mazha0309blog
 
 jobs:
   image:
