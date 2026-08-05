@@ -16,7 +16,7 @@ find "$output_dir" \
   -mtime +2 \
   -delete
 
-work_dir="$(mktemp -d)"
+work_dir="$(mktemp -d "${TMPDIR:-/var/tmp}/mazha-home-backup.XXXXXX")"
 trap 'rm -rf "$work_dir"' EXIT
 
 compose=(docker compose -f "$compose_file")
